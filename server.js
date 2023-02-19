@@ -10,7 +10,7 @@ app.use(express.json())
 app.listen(port, () => {
   console.log(`Server started. Listening on port ${port}`)
 })
-
+test
 app.get('/ingredients', (req, res) => {
   db
     .select()
