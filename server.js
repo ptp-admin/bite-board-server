@@ -15,14 +15,14 @@ app.get('/ingredients', (req, res) => {
   console.log('GET request recived');
   db
     .select()
-    .from('ingredients')
+    .from('ingredient')
     .then(response => res.send(response))
 })
 
 app.get('/ingredients/:id', (req, res) => {
   db
     .select()
-    .from('ingredients')
+    .from('ingredient')
     .where('id', req.params.id)
     .then(response => res.send(response))
 })
@@ -30,7 +30,7 @@ app.get('/ingredients/:id', (req, res) => {
 app.post('/ingredients', (req, res) => {
   console.log('POST request recieved');
   console.log(req.body);
-  db('ingredients')
+  db('ingredient')
     .insert({
       name: req.body.name, 
       category: req.body.category,
@@ -42,7 +42,7 @@ app.post('/ingredients', (req, res) => {
 })
 
 app.put('/ingredients/:id', (req, res) => {
-  db('ingredients')
+  db('ingredient')
   .where('id', req.params.id)
   .update({
     name: req.body.name, 
@@ -57,13 +57,13 @@ app.put('/ingredients/:id', (req, res) => {
 app.delete('/ingredients/:id', (req, res) => {
   const id = req.params.id
   
-  db('ingredients')
+  db('ingredient')
     .where('id', id)
     .del()
     .then(console.log(`deleted record with id: ${id}`))
     .then(() => {
       db
-        .select().from('ingredients')
+        .select().from('ingredient')
         .then(response => res.send(response))
     })
 })
