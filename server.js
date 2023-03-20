@@ -12,7 +12,7 @@ app.listen(port, () => {
 })
 
 app.get('/ingredients', (req, res) => {
-  console.log('GET request recived');
+  console.log('GET request recieved');
   db
     .select()
     .from('ingredient')
@@ -66,4 +66,46 @@ app.delete('/ingredients/:id', (req, res) => {
         .select().from('ingredient')
         .then(response => res.send(response))
     })
+})
+
+app.get('/recipe', (req, res) => {
+  console.log('GET request recieved');
+  db
+    .select()
+    .from('recipe')
+    .then(recipes => {
+			return recipes.map(recipe => {
+				recipe.ingredients = db
+					.select()
+					.from('recipe_ingredient')
+					.where('recipe_id', recipe.id)
+					.then(ingredientsArray => {
+						console.log(ingredientsArray);	
+						return ingredientsArray
+					})
+				return recipe
+			})
+		})
+		.then(recipes => console.log(recipes))
+})
+
+app.get('/recipev2', async (req, res) => {
+  console.log('GET request recieved');
+  const recipes = await db.select().from('recipe')
+
+	const recipesWithIngredients = recipes.map(async recipe => {
+		return await {
+			...recipe,
+			ingredients: await db
+				.select()
+				.from('recipe_ingredient')
+				.where('recipe_id', recipe.id)
+				.then(ingredientsArray => {
+					// console.log(ingredientsArray);	
+					return ingredientsArray
+				})
+		}
+	})
+
+	console.log(recipesWithIngredients);
 })
