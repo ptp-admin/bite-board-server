@@ -74,38 +74,22 @@ app.get('/recipe', (req, res) => {
     .select()
     .from('recipe')
     .then(recipes => {
-			return recipes.map(recipe => {
-				recipe.ingredients = db
-					.select()
+			var recipesWithIngredients = recipes.map(recipe => {
+				return db
+					.select(
+						'ingredient.*',
+					)
+					.select(db.ref('recipe_ingredient.number_of').as('recipe_number_of'))
+					.select(db.ref('recipe_ingredient.measurement_unit').as('recipe_measurement_unit'))
 					.from('recipe_ingredient')
 					.where('recipe_id', recipe.id)
+					.join('ingredient', 'ingredient.id', '=', 'recipe_ingredient.ingredient_id')
 					.then(ingredientsArray => {
-						console.log(ingredientsArray);	
-						return ingredientsArray
+						return {...recipe, ingredients: ingredientsArray}
 					})
-				return recipe
+			})
+			Promise.all(recipesWithIngredients).then(results => {
+				res.send(results)
 			})
 		})
-		.then(recipes => console.log(recipes))
-})
-
-app.get('/recipev2', async (req, res) => {
-  console.log('GET request recieved');
-  const recipes = await db.select().from('recipe')
-
-	const recipesWithIngredients = recipes.map(async recipe => {
-		return await {
-			...recipe,
-			ingredients: await db
-				.select()
-				.from('recipe_ingredient')
-				.where('recipe_id', recipe.id)
-				.then(ingredientsArray => {
-					// console.log(ingredientsArray);	
-					return ingredientsArray
-				})
-		}
-	})
-
-	console.log(recipesWithIngredients);
 })
