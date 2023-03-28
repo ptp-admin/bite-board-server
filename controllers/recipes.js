@@ -3,7 +3,6 @@ const db = require('../utils/database')
 
 recipesRouter.get('/', (req, res) => {
   console.log('GET request recieved');
-	// TODO: implement this whole route as a transaction for better performance. Knex has docs for transactions
   db
     .select()
     .from('recipe')
@@ -45,5 +44,12 @@ recipesRouter.get('/', (req, res) => {
 			})
 		})
 })
+
+// TODO function for calculating the derived ingredient cost for the recipe
+// call it deriveCost()  ??
+
+// TODO function for taking the ingredient_unit and recipe_unit 
+// returns multipliers to be used as ingredient_unit_converted and recipe_unit_converted
+// call it unitsToMultipliers(small_unit, big_unit) ??
 
 module.exports = recipesRouter
