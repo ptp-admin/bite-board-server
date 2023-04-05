@@ -47,4 +47,11 @@ const getRecipeIngredients = recipes => {
 	})
 }
 
+// TODO function for calculating the derived ingredient cost for the recipe
+// call it deriveCost()  ??
+
+// TODO function for taking the ingredient_unit and recipe_unit 
+// returns multipliers to be used as ingredient_unit_converted and recipe_unit_converted
+// call it unitsToMultipliers(small_unit, big_unit) ??
+
 module.exports = recipesRouter
