@@ -2,7 +2,7 @@ const recipesRouter = require('express').Router()
 const db = require('../utils/database')
 
 recipesRouter.get('/', (req, res) => {
-  console.log('GET request recieved');
+  console.log('/recipes/ GET request recieved');
 	
 	db
     .select()
