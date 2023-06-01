@@ -1,120 +1,164 @@
-/* eslint-disable camelcase */
-/* eslint-disable no-tabs */
-const recipesRouter = require("express").Router();
-const db = require("../utils/database");
-const recipeMocks = require("../mock-data/recipes");
+const recipesRouter = require('express').Router();
+const db = require('../utils/database');
+const recipeMocks = require('../mock-data/recipes');
+const convert = require('convert-units');
 
-interface Ingredient {
-  id: number;
-  name: string;
-  category: string;
-  cost_per: number;
-  number_of: number;
-  measurement_unit: string;
-}
-
-interface RecipeIngredient extends Ingredient {
-  derived_cost: number;
-  ingredient_cost_per: number;
-}
-
-interface Recipe {
-  id: 1;
-  name: string;
-  method: string;
-  servings: number;
-  ingredients: RecipeIngredient[];
-}
-
-recipesRouter.get("/mock", (req, res) => {
-  console.log("/recipes/mock GET request recieved");
-
+recipesRouter.get('/mock', (req, res) => {
+  console.log('/recipes/mock GET request received');
   res.send(recipeMocks);
 });
 
-recipesRouter.get("/", (req, res) => {
-  console.log("/recipes/ GET request recieved");
-  db.select()
-    .from("recipe")
-    .then((recipes) => {
-      const whereInClause = recipes
-        .map((recipe) => {
-          return "'" + recipe.id + "'";
-        })
-        .join(",");
-
-      db.raw(
-        `
-					SELECT
-						i.id as ingredient_id,
-						i.name as ingredient_name,
-						i.category as ingredient_category,
-						i.cost_per as ingredient_cost_per,
-						i.number_of as ingredient_number_of,
-						i.measurement_unit as ingredient_measurement_unit,
-						ri.recipe_id,
-						ri.number_of as recipe_number_of,
-						ri.measurement_unit as recipe_measurement_unit
-					FROM
-						recipe_ingredient ri
-					LEFT JOIN
-						ingredient i ON i.id = ri.ingredient_id
-					WHERE
-						ri.recipe_id IN (${whereInClause})
-				`
+recipesRouter.get('/', async (req, res) => {
+  try {
+    console.log('/recipes/ GET request received');
+    const recipes = await db.select().from('recipe');
+    const recipeIds = recipes.map((recipe) => recipe.id);
+    const ingredients = await db('recipe_ingredient as ri')
+      .select(
+        'i.id as ingredient_id',
+        'i.name as ingredient_name',
+        'i.category as ingredient_category',
+        'i.cost_per as ingredient_cost_per',
+        'i.number_of as ingredient_number_of',
+        'i.measurement_unit as ingredient_measurement_unit',
+        'ri.recipe_id',
+        'ri.number_of as recipe_number_of',
+        'ri.measurement_unit as recipe_measurement_unit'
       )
-        .then((result) => {
-          const ingredients = result[0]; // knex.raw queries result in an array being returned. The payload is contained within the first element
+      .leftJoin('ingredient as i', 'i.id', 'ri.ingredient_id')
+      .whereIn('ri.recipe_id', recipeIds);
 
-          return recipes.map((recipe) => {
-            const recipeIngredients = ingredients
-              .filter((ingredient) => ingredient.recipe_id === recipe.id)
-              .map((ingredient) => {
-                // destructure the properties returned by the above SQL query
-                const {
-                  ingredient_cost_per,
-                  ingredient_number_of,
-                  recipe_number_of,
-                  recipe_id,
-                  ...rest
-                } = ingredient;
-                // reassemble the desired ingredient object
-                return {
-                  ...rest,
-                  recipe_number_of,
-                  ingredient_derived_cost: deriveCost(
-                    ingredient_cost_per,
-                    ingredient_number_of,
-                    recipe_number_of
-                  ),
-                };
-              });
-
-            return {
-              ...recipe,
-              recipeIngredients,
-            };
-          });
-        })
-        .then((result) => {
-          res.send(result);
+    const result = recipes.map((recipe) => {
+      const recipeIngredients = ingredients
+        .filter((ingredient) => ingredient.recipe_id === recipe.id)
+        .map((ingredient) => {
+          const {
+            ingredient_number_of,
+            ingredient_cost_per,
+            ingredient_measurement_unit,
+            recipe_number_of,
+            recipe_measurement_unit,
+            recipe_id,
+            ...rest
+          } = ingredient;
+          return {
+            ...rest,
+            recipe_number_of,
+            derived_cost: deriveCost(
+              ingredient_number_of,
+              ingredient_cost_per,
+              ingredient_measurement_unit,
+              recipe_number_of,
+              recipe_measurement_unit
+            ),
+          };
         });
+
+      return {
+        ...recipe,
+        recipeIngredients,
+      };
     });
+
+    res.send(result);
+  } catch (error) {
+    console.error(error);
+    res.send(error);
+  }
 });
 
-/* TODO function for calculating the derived ingredient cost for the recipe
-Account for cases where ingredient.measurement_unit and recipe_ingredient.measurement_unit 
-need to be converted to calculate cost. */
-const deriveCost = (
-  ingredient_cost_per,
-  ingredient_number_of,
-  recipe_number_of
-) => {
-  return (ingredient_cost_per / ingredient_number_of) * recipe_number_of;
-};
+recipesRouter.post('/', async (req, res) => {
+  const { recipeIngredients, name, ...recipe } = req.body;
 
-// TODO function for taking the ingredient_unit and recipe_unit
-// returns multipliers to be used as ingredient_unit_converted and recipe_unit_converted
-// call it unitsToMultipliers(small_unit, big_unit) ??
+  try {
+    await db.transaction(async (trx) => {
+      const [recipeId] = await db
+        .insert({ name, ...recipe })
+        .returning('id')
+        .into('recipe')
+        .transacting(trx);
+
+      const ingredientPromises = recipeIngredients.map(async (ingredient) => {
+        const {
+          ingredient_id,
+          ingredient_name,
+          ingredient_category,
+          ingredient_cost_per,
+          ingredient_number_of,
+          ingredient_measurement_unit,
+          recipe_measurement_unit,
+          recipe_number_of,
+        } = ingredient;
+
+        if (ingredient_id) {
+          await db('recipe_ingredient')
+            .insert({
+              ingredient_id,
+              recipe_id: recipeId,
+              number_of: recipe_number_of,
+              measurement_unit: recipe_measurement_unit,
+            })
+            .transacting(trx);
+        } else {
+          const [ingredientId] = await db
+            .insert({
+              name: ingredient_name,
+              category: ingredient_category,
+              cost_per: ingredient_cost_per,
+              number_of: ingredient_number_of,
+              measurement_unit: ingredient_measurement_unit,
+            })
+            .returning('id')
+            .into('ingredient')
+            .transacting(trx);
+
+          await db('recipe_ingredient')
+            .insert({
+              ingredient_id: ingredientId,
+              recipe_id: recipeId,
+              number_of: recipe_number_of,
+              measurement_unit: recipe_measurement_unit,
+            })
+            .transacting(trx);
+        }
+      });
+
+      await Promise.all(ingredientPromises);
+    });
+
+    console.log(
+      `Successfully added ${name} and all ingredients to the database`
+    );
+    res.send(`Successfully added ${name} and all ingredients to the database`);
+  } catch (error) {
+    console.error(error);
+    res.send(error);
+  }
+});
+
+// recipe_number_of * ingredient_number_of * ingredient_cost_per * scale_mulitplier
+//        500(g)               1(kg)                 $10                 0.001
+// or convert(1).from('recipe_measurement_unit').to('ingredient_measurement_unit')
+const deriveCost = (
+  ingredient_number_of,
+  ingredient_cost_per,
+  ingredient_measurement_unit,
+  recipe_number_of,
+  recipe_measurement_unit
+) => {
+  try {
+    const scale_mulitplier = convert(1)
+      .from(recipe_measurement_unit)
+      .to(ingredient_measurement_unit);
+    const result =
+      recipe_number_of *
+      ingredient_number_of *
+      ingredient_cost_per *
+      scale_mulitplier;
+    return result;
+  } catch (Error) {
+    return Error.message;
+  }
+};
 
 module.exports = recipesRouter;
