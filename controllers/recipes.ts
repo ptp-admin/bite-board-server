@@ -1,9 +1,8 @@
 /* eslint-disable camelcase */
 /* eslint-disable no-tabs */
-const recipesRouter = require('express').Router();
-const db = require('../utils/database');
-const recipeMocks = require('../mock-data/recipes');
-const convert = require('convert-units');
+const recipesRouter = require("express").Router();
+const db = require("../utils/database");
+const recipeMocks = require("../mock-data/recipes");
 
 interface Ingredient {
   id: number;
@@ -73,11 +72,9 @@ recipesRouter.get("/", (req, res) => {
               .map((ingredient) => {
                 // destructure the properties returned by the above SQL query
                 const {
-                  ingredient_number_of,
                   ingredient_cost_per,
-                  ingredient_measurement_unit,
+                  ingredient_number_of,
                   recipe_number_of,
-                  recipe_measurement_unit,
                   recipe_id,
                   ...rest
                 } = ingredient;
@@ -86,11 +83,9 @@ recipesRouter.get("/", (req, res) => {
                   ...rest,
                   recipe_number_of,
                   ingredient_derived_cost: deriveCost(
-                    ingredient_number_of,
                     ingredient_cost_per,
-                    ingredient_measurement_unit,
-                    recipe_number_of,
-                    recipe_measurement_unit
+                    ingredient_number_of,
+                    recipe_number_of
                   ),
                 };
               });
@@ -107,29 +102,19 @@ recipesRouter.get("/", (req, res) => {
     });
 });
 
-// recipe_number_of * ingredient_number_of * ingredient_cost_per * scale_mulitplier
-//        500(g)               1(kg)                 $10                 0.001
-// or convert(1).from('recipe_measurement_unit').to('ingredient_measurement_unit')
+/* TODO function for calculating the derived ingredient cost for the recipe
+Account for cases where ingredient.measurement_unit and recipe_ingredient.measurement_unit 
+need to be converted to calculate cost. */
 const deriveCost = (
-  ingredient_number_of,
   ingredient_cost_per,
-  ingredient_measurement_unit,
-  recipe_number_of,
-  recipe_measurement_unit
+  ingredient_number_of,
+  recipe_number_of
 ) => {
-  try {
-    const scale_mulitplier = convert(1)
-      .from(recipe_measurement_unit)
-      .to(ingredient_measurement_unit);
-    const result =
-      recipe_number_of *
-      ingredient_number_of *
-      ingredient_cost_per *
-      scale_mulitplier;
-    return result;
-  } catch (Error) {
-    return Error.message;
-  }
+  return (ingredient_cost_per / ingredient_number_of) * recipe_number_of;
 };
+
+// TODO function for taking the ingredient_unit and recipe_unit
+// returns multipliers to be used as ingredient_unit_converted and recipe_unit_converted
+// call it unitsToMultipliers(small_unit, big_unit) ??
 
 module.exports = recipesRouter;
