@@ -1,47 +1,49 @@
 /* eslint-disable camelcase */
 /* eslint-disable no-tabs */
-const recipesRouter = require("express").Router();
-const db = require("../utils/database");
-const recipeMocks = require("../mock-data/recipes");
-
-interface Ingredient {
-  id: number;
-  name: string;
-  category: string;
-  cost_per: number;
-  number_of: number;
-  measurement_unit: string;
-}
-
-interface RecipeIngredient extends Ingredient {
-  derived_cost: number;
-  ingredient_cost_per: number;
-}
+const recipesRouter = require('express').Router();
+const db = require('../utils/database');
+const recipeMocks = require('../mock-data/recipes');
 
 interface Recipe {
-  id: 1;
+  id: number;
   name: string;
   method: string;
   servings: number;
-  ingredients: RecipeIngredient[];
+  recipeIngredients: RecipeIngredient[];
 }
 
-recipesRouter.get("/mock", (req, res) => {
-  console.log("/recipes/mock GET request recieved");
+interface RecipeIngredient {
+  ingredient_id: number;
+  ingredient_name: string;
+  ingredient_category: string;
+  ingredient_measurement_unit: string;
+  recipe_measurement_unit: string;
+  recipe_number_of: number;
+  ingredient_derived_cost: number;
+}
+
+interface ReturnedIngredient extends RecipeIngredient {
+  ingredient_cost_per: number;
+  ingredient_number_of: number;
+  recipe_id: number;
+}
+
+recipesRouter.get('/mock', (req, res) => {
+  console.log('/recipes/mock GET request recieved');
 
   res.send(recipeMocks);
 });
 
-recipesRouter.get("/", (req, res) => {
-  console.log("/recipes/ GET request recieved");
+recipesRouter.get('/', (req, res) => {
+  console.log('/recipes/ GET request recieved');
   db.select()
-    .from("recipe")
-    .then((recipes) => {
+    .from('recipe')
+    .then((recipes: Recipe[]) => {
       const whereInClause = recipes
         .map((recipe) => {
           return "'" + recipe.id + "'";
         })
-        .join(",");
+        .join(',');
 
       db.raw(
         `
@@ -64,12 +66,12 @@ recipesRouter.get("/", (req, res) => {
 				`
       )
         .then((result) => {
-          const ingredients = result[0]; // knex.raw queries result in an array being returned. The payload is contained within the first element
+          const ingredients: ReturnedIngredient[] = result[0]; // knex.raw queries result in an array being returned. The payload is contained within the first element
 
-          return recipes.map((recipe) => {
+          return recipes.map((recipe): Recipe => {
             const recipeIngredients = ingredients
               .filter((ingredient) => ingredient.recipe_id === recipe.id)
-              .map((ingredient) => {
+              .map((ingredient): RecipeIngredient => {
                 // destructure the properties returned by the above SQL query
                 const {
                   ingredient_cost_per,
@@ -100,6 +102,74 @@ recipesRouter.get("/", (req, res) => {
           res.send(result);
         });
     });
+});
+
+// Special thanks to chatGPT for helping with this one
+recipesRouter.post('/', async (req, res) => {
+  const { recipeIngredients, name, ...recipe } = req.body;
+
+  try {
+    await db.transaction(async (trx) => {
+      const recipeId = await db
+        .insert({ name, ...recipe })
+        .returning('id')
+        .into('recipe')
+        .transacting(trx);
+
+      const ingredientPromises = recipeIngredients.map((ingredient) => {
+        const {
+          ingredient_id,
+          ingredient_name,
+          ingredient_category,
+          ingredient_cost_per,
+          ingredient_number_of,
+          ingredient_measurement_unit,
+          recipe_measurement_unit,
+          recipe_number_of,
+        } = ingredient;
+
+        const insertPromise = ingredient_id
+          ? db('recipe_ingredient').insert({
+              ingredient_id,
+              recipe_id: recipeId[0],
+              number_of: recipe_number_of,
+              measurement_unit: recipe_measurement_unit,
+            })
+          : db.transaction(async (trx) => {
+              const [ingredientId] = await db
+                .insert({
+                  name: ingredient_name,
+                  category: ingredient_category,
+                  cost_per: ingredient_cost_per,
+                  number_of: ingredient_number_of,
+                  measurement_unit: ingredient_measurement_unit,
+                })
+                .returning('id')
+                .into('ingredient')
+                .transacting(trx);
+
+              return db('recipe_ingredient').insert({
+                ingredient_id: ingredientId,
+                recipe_id: recipeId[0],
+                number_of: recipe_number_of,
+                measurement_unit: recipe_measurement_unit,
+              });
+            });
+
+        return insertPromise.transacting(trx);
+      });
+
+      await Promise.all(ingredientPromises);
+    });
+
+    console.log(
+      `Successfully added ${name} and all ingredients to the database`
+    );
+    res.send(`Successfully added ${name} and all ingredients to the database`);
+  } catch (error) {
+    console.error(error);
+    res.send(error);
+  }
 });
 
 /* TODO function for calculating the derived ingredient cost for the recipe
