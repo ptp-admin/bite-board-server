@@ -68,6 +68,7 @@ recipesRouter.get('/', async (req, res) => {
 });
 
 recipesRouter.post('/', async (req, res) => {
+	console.log('/recipes/ POST request received');
   const { recipeIngredients, name, ...recipe } = req.body;
 
   try {
