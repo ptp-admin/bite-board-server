@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config();
 const db = require('knex')({
   client: 'mysql2',
   connection: {
@@ -6,8 +6,8 @@ const db = require('knex')({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    port : 3306
-  }
+    port: 3306,
+  },
 });
 
-module.exports = db
+module.exports = db;

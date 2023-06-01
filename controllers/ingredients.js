@@ -4,18 +4,16 @@ const db = require('../utils/database'); // Using 'knex' package for database ca
 ingredientsRouter.get('/', (req, res) => {
   console.log('/ingredients/ GET request recieved');
 
-  db
-    .select()
+  db.select()
     .from('ingredient')
-    .then(response => res.send(response));
+    .then((response) => res.send(response));
 });
 
 ingredientsRouter.get('/:id', (req, res) => {
-  db
-    .select()
+  db.select()
     .from('ingredient')
     .where('id', req.params.id)
-    .then(response => res.send(response));
+    .then((response) => res.send(response));
 });
 
 ingredientsRouter.post('/', (req, res) => {
@@ -27,7 +25,7 @@ ingredientsRouter.post('/', (req, res) => {
       category: req.body.category,
       cost_per: req.body.cost_per,
       number_of: req.body.number_of,
-      measurement_unit: req.body.measurement_unit
+      measurement_unit: req.body.measurement_unit,
     })
     .then(() => res.send('Added ingredient to database'));
 });
@@ -42,7 +40,7 @@ ingredientsRouter.put('/:id', (req, res) => {
       category: req.body.category,
       cost_per: req.body.cost_per,
       number_of: req.body.number_of,
-      measurement_unit: req.body.measurement_unit
+      measurement_unit: req.body.measurement_unit,
     })
     .then(() => res.send('Updated ingredient in database'));
 });
@@ -56,9 +54,9 @@ ingredientsRouter.delete('/:id', (req, res) => {
     .del()
     .then(console.log(`deleted record with id: ${id}`))
     .then(() => {
-      db
-        .select().from('ingredient')
-        .then(response => res.send(response));
+      db.select()
+        .from('ingredient')
+        .then((response) => res.send(response));
     });
 });
 
