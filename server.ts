@@ -17,3 +17,5 @@ app.use('/recipes', recipesRouter);
 app.listen(port, () => {
   console.log(`Server started. Listening on port ${port}`)
 })
+
+export {};
