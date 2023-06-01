@@ -7,8 +7,7 @@
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "knex": "^2.4.2",
-    "mysql2": "^3.1.2",
-    "prettier": "^2.8.8"
+    "mysql2": "^3.1.2"
   },
   "scripts": {
     "dev": "tsnd server.ts",
@@ -24,10 +23,13 @@
     "@types/node": "^18.15.11",
     "@typescript-eslint/eslint-plugin": "^5.59.8",
     "eslint": "^8.41.0",
+    "eslint-config-prettier": "^8.8.0",
     "eslint-config-standard-with-typescript": "^34.0.1",
     "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-n": "^15.7.0",
+    "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-promise": "^6.1.1",
+    "prettier": "^2.8.8",
     "ts-node": "^10.9.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.0.4"
