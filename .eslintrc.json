@@ -13,6 +13,7 @@
         "ecmaVersion": "latest"
     },
     "rules": {
+			"prettier/prettier": "error",
 			"eqeqeq": "error",
 			"quotes": [
 				"error",

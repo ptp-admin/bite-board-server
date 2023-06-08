@@ -14,9 +14,9 @@ const deriveCost = (
     const scaleMulitplier = convert(1)
       .from(recipe_measurement_unit)
       .to(ingredient_measurement_unit);
-		// recipe_number_of * ingredient_number_of * ingredient_cost_per * scale_mulitplier
-		//        500(g)               1(kg)                 $10                 0.001
-		// or convert(1).from('recipe_measurement_unit').to('ingredient_measurement_unit')
+    // recipe_number_of * ingredient_number_of * ingredient_cost_per * scale_mulitplier
+    //        500(g)               1(kg)                 $10                 0.001
+    // or convert(1).from('recipe_measurement_unit').to('ingredient_measurement_unit')
     const result =
       recipe_number_of *
       ingredient_number_of *
@@ -24,7 +24,7 @@ const deriveCost = (
       scaleMulitplier;
     return result;
   } catch (Error) {
-    return Error.message;
+    return null;
   }
 };
 
@@ -121,7 +121,8 @@ async function addRecipeIngredients(recipeId, ingredients, trx) {
 
 async function updateRecipeIngredients(recipeId, ingredients, trx) {
   for (const ingredient of ingredients) {
-    const { ingredient_id, recipe_number_of, recipe_measurement_unit } = ingredient;
+    const { ingredient_id, recipe_number_of, recipe_measurement_unit } =
+      ingredient;
     const updatedFields = {
       number_of: recipe_number_of,
       measurement_unit: recipe_measurement_unit,
@@ -215,6 +216,67 @@ recipesRouter.get('/', async (req, res) => {
   }
 });
 
+recipesRouter.get('/:id', async (req, res) => {
+	const { id } = req.params;
+  try {
+    console.log(`/recipes/${id} GET request received`);
+    const returnedRecipe = await db.select().from('recipe').where('id', id);
+		const recipe = returnedRecipe[0]
+    const recipeId = recipe.id
+		
+    const ingredients = await db('recipe_ingredient as ri')
+      .select(
+        'i.id as ingredient_id',
+        'i.name as ingredient_name',
+        'i.category as ingredient_category',
+        'i.cost_per as ingredient_cost_per',
+        'i.number_of as ingredient_number_of',
+        'i.measurement_unit as ingredient_measurement_unit',
+        'ri.recipe_id',
+        'ri.number_of as recipe_number_of',
+        'ri.measurement_unit as recipe_measurement_unit'
+      )
+      .leftJoin('ingredient as i', 'i.id', 'ri.ingredient_id')
+      .where('ri.recipe_id', recipeId);
+
+		const recipeIngredients = ingredients
+			.filter((ingredient) => ingredient.recipe_id === recipeId)
+			.map((ingredient) => {
+				const {
+					ingredient_number_of,
+					ingredient_cost_per,
+					ingredient_measurement_unit,
+					recipe_number_of,
+					recipe_measurement_unit,
+					recipe_id,
+					...rest
+				} = ingredient;
+				return {
+					...rest,
+					recipe_number_of,
+					recipe_measurement_unit,
+					derived_cost: deriveCost(
+						ingredient_number_of,
+						ingredient_cost_per,
+						ingredient_measurement_unit,
+						recipe_number_of,
+						recipe_measurement_unit
+					),
+				};
+			});
+
+		const result =  {
+			...recipe,
+			recipeIngredients,
+		};
+
+    res.send(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(error);
+  }
+});
+
 recipesRouter.post('/', async (req, res) => {
   console.log('/recipes/ POST request received');
   const { recipeIngredients, name, ...recipe } = req.body;
@@ -245,10 +307,15 @@ recipesRouter.post('/', async (req, res) => {
 
 recipesRouter.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { recipe, addIngredients, updateIngredients, removeIngredients } = req.body;
+  const { recipe, addIngredients, updateIngredients, removeIngredients } =
+    req.body;
 
   try {
-    const existingRecipe = await db.select().from('recipe').where('id', id).first();
+    const existingRecipe = await db
+      .select()
+      .from('recipe')
+      .where('id', id)
+      .first();
 
     if (!existingRecipe) {
       return res.status(404).send('Recipe not found');
@@ -260,7 +327,7 @@ recipesRouter.put('/:id', async (req, res) => {
       }
 
       if (addIngredients) {
-				await addRecipeIngredients(id, addIngredients, trx)
+        await addRecipeIngredients(id, addIngredients, trx);
       }
 
       if (updateIngredients) {
@@ -293,10 +360,7 @@ recipesRouter.delete('/:id', async (req, res) => {
 
     await db.transaction(async (trx) => {
       // Delete recipe
-      await db('recipe')
-        .where('id', recipeId)
-        .del()
-        .transacting(trx);
+      await db('recipe').where('id', recipeId).del().transacting(trx);
 
       // Delete associated recipe_ingredients
       await db('recipe_ingredient')
