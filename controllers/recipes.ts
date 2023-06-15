@@ -52,7 +52,7 @@ recipesRouter.get('/', async (req, res) => {
           return {
             ...rest,
             recipe_number_of,
-            derived_cost: deriveCost(
+            derivedCost: deriveCost(
               ingredient_number_of,
               ingredient_cost_per,
               ingredient_measurement_unit,
@@ -65,6 +65,7 @@ recipesRouter.get('/', async (req, res) => {
       return {
         ...recipe,
         recipeIngredients,
+        costPerServe: costPerServe(recipe.servings, recipeIngredients),
       };
     });
 
@@ -76,7 +77,7 @@ recipesRouter.get('/', async (req, res) => {
 });
 
 recipesRouter.post('/', async (req, res) => {
-	console.log('/recipes/ POST request received');
+  console.log('/recipes/ POST request received');
   const { recipeIngredients, name, ...recipe } = req.body;
 
   try {
@@ -166,8 +167,20 @@ const deriveCost = (
       scale_mulitplier;
     return result;
   } catch (Error) {
-    return Error.message;
+    return null;
   }
+};
+
+const costPerServe = (
+  servings: number,
+  recipe_ingredients: Array<RecipeIngredient>
+) => {
+  const total = recipe_ingredients.reduce(
+    (total, ingredient) => ingredient.derivedCost + total,
+    0
+  );
+
+  return total / servings;
 };
 
 module.exports = recipesRouter;
