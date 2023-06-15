@@ -3,6 +3,14 @@ const db = require('../utils/database');
 const recipeMocks = require('../mock-data/recipes');
 const convert = require('convert-units');
 
+interface RecipeIngredient {
+  ingredient_id: number;
+  ingredient_name: string;
+  ingredient_category: string;
+  recipe_number_of: number;
+  derivedCost: number;
+}
+
 recipesRouter.get('/mock', (req, res) => {
   console.log('/recipes/mock GET request received');
   res.send(recipeMocks);
