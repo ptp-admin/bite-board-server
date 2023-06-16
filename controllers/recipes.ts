@@ -36,6 +36,23 @@ const deriveCost = (
   }
 };
 
+const costPerServe = (
+  servings: number,
+  recipe_ingredients: Array<RecipeIngredient>
+) => {
+  const total = recipe_ingredients.reduce(
+    (total, ingredient) => ingredient.derivedCost + total,
+    0
+  );
+
+  return formatAsFloat2DecimalPlaces(total / servings);
+};
+
+const formatAsFloat2DecimalPlaces = num => {
+	if (!num) return 0;
+	return Number(Math.round(parseFloat(num + 'e2')) + 'e-2');
+};
+
 const addRecipeIngredient = async (trx, recipeId, ingredient) => {
   const {
     ingredient_id,
@@ -386,22 +403,5 @@ recipesRouter.delete('/:id', async (req, res) => {
     res.status(500).send(error);
   }
 });
-
-const costPerServe = (
-  servings: number,
-  recipe_ingredients: Array<RecipeIngredient>
-) => {
-  const total = recipe_ingredients.reduce(
-    (total, ingredient) => ingredient.derivedCost + total,
-    0
-  );
-
-  return formatAsFloat2DecimalPlaces(total / servings);
-};
-
-const formatAsFloat2DecimalPlaces = num => {
-	if (!num) return 0;
-	return Number(Math.round(parseFloat(num + 'e2')) + 'e-2');
-};
 
 module.exports = recipesRouter;
