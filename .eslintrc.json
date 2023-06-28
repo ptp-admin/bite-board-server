@@ -1,0 +1,51 @@
+{
+    "env": {
+        "browser": true,
+        "commonjs": true,
+        "es2021": true
+    },
+    "extends": [
+			"standard-with-typescript",
+			"plugin:prettier/recommended"
+		],
+		"plugins": ["prettier"],
+    "parserOptions": {
+        "ecmaVersion": "latest"
+    },
+    "rules": {
+			"prettier/prettier": "error",
+			"eqeqeq": "error",
+			"quotes": [
+				"error",
+				"single",
+				{ "avoidEscape": true, "allowTemplateLiterals": false }
+			],
+			"semi": ["error", "always"],
+			"no-fallthrough": "off",
+			"no-var": "error",
+			"no-unused-vars": [
+				"error",
+				{
+					"argsIgnorePattern": "^_",
+					"varsIgnorePattern": "^_",
+					"ignoreRestSiblings": true
+				}
+			],
+			"no-undef": "off",
+			"no-trailing-spaces": "error",
+			"no-eval": "error",
+			"no-mixed-spaces-and-tabs": "off",
+			"flowtype/space-after-type-colon": "off",
+			"no-multi-assign": "error",
+			"flowtype/generic-spacing": "off",
+			"prefer-const": "error"
+		},
+		"overrides": [
+			{
+				"rules": {
+					"eqeqeq": "warn"
+				},
+				"files": "src/providers/**/*.js"
+			}
+		]
+}
