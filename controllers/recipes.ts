@@ -3,7 +3,7 @@ const db = require('../utils/database');
 const recipeMocks = require('../mockData/recipes');
 const convert = require('convert-units');
 
-interface Recipe {
+export default interface Recipe {
   id: number;
   name: string;
   method?: string;
