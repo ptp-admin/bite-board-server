@@ -462,3 +462,4 @@ recipesRouter.delete('/:id', async (req: any, res: any) => {
 });
 
 module.exports = recipesRouter;
+export {};
