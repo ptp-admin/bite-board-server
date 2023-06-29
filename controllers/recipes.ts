@@ -1,15 +1,15 @@
 const recipesRouter = require('express').Router();
 const db = require('../utils/database');
-const recipeMocks = require('../mock-data/recipes');
+const recipeMocks = require('../mockData/recipes');
 const convert = require('convert-units');
 
 interface Recipe {
-	id: number,
-	name: string,
-	method?: string,
-	servings?: number,
-	recipeIngredients?: RecipeIngredient[],
-	costPerServe?: number
+  id: number;
+  name: string;
+  method?: string;
+  servings?: number;
+  recipeIngredients?: RecipeIngredient[];
+  costPerServe?: number;
 }
 
 interface RecipeIngredient {
@@ -21,18 +21,18 @@ interface RecipeIngredient {
 }
 
 interface Ingredient {
-	ingredient_id: number,
-  ingredient_name: string,
-  ingredient_category: string,
-	ingredient_cost_per: number,
-  ingredient_number_of: number,
-  ingredient_measurement_unit: string, // TODO add a type for the unit enum and assign that type to this field
+  ingredient_id: number;
+  ingredient_name: string;
+  ingredient_category: string;
+  ingredient_cost_per: number;
+  ingredient_number_of: number;
+  ingredient_measurement_unit: string; // TODO add a type for the unit enum and assign that type to this field
 }
 
 interface RecipeIngredientDetailed extends Ingredient {
-	recipe_number_of: number,
-	recipe_measurement_unit: string,
-	recipe_id: number
+  recipe_number_of: number;
+  recipe_measurement_unit: string;
+  recipe_id: number;
 }
 
 const deriveCost = (
@@ -72,8 +72,8 @@ const costPerServe = (
 };
 
 const formatAsFloat2DecimalPlaces = (num: Number) => {
-	if (!num) return 0;
-	return Number(Math.round(parseFloat(num + 'e2')) + 'e-2');
+  if (!num) return 0;
+  return Number(Math.round(parseFloat(num + 'e2')) + 'e-2');
 };
 
 async function updateRecipe(recipeId: number, updatedFields: Recipe, trx: any) {
@@ -83,7 +83,11 @@ async function updateRecipe(recipeId: number, updatedFields: Recipe, trx: any) {
     .transacting(trx);
 }
 
-const addRecipeIngredient = async (trx: any, recipeId: number, ingredient: RecipeIngredientDetailed) => {
+const addRecipeIngredient = async (
+  trx: any,
+  recipeId: number,
+  ingredient: RecipeIngredientDetailed
+) => {
   const {
     ingredient_id,
     ingredient_name,
@@ -161,13 +165,21 @@ const addRecipeIngredient = async (trx: any, recipeId: number, ingredient: Recip
   }
 };
 
-async function addRecipeIngredients(recipeId: number, ingredients: RecipeIngredientDetailed[], trx: any) {
+async function addRecipeIngredients(
+  recipeId: number,
+  ingredients: RecipeIngredientDetailed[],
+  trx: any
+) {
   for (const ingredient of ingredients) {
     await addRecipeIngredient(trx, recipeId, ingredient);
   }
 }
 
-async function updateRecipeIngredients(recipeId: number, ingredients: RecipeIngredientDetailed[], trx: any) {
+async function updateRecipeIngredients(
+  recipeId: number,
+  ingredients: RecipeIngredientDetailed[],
+  trx: any
+) {
   for (const ingredient of ingredients) {
     const { ingredient_id, recipe_number_of, recipe_measurement_unit } =
       ingredient;
@@ -186,7 +198,11 @@ async function updateRecipeIngredients(recipeId: number, ingredients: RecipeIngr
   }
 }
 
-async function removeRecipeIngredients(recipeId: number, ingredients: Ingredient[], trx: any) {
+async function removeRecipeIngredients(
+  recipeId: number,
+  ingredients: Ingredient[],
+  trx: any
+) {
   const removeIngredientPromises = ingredients.map(async (ingredient) => {
     await db('recipe_ingredient')
       .where({
@@ -227,7 +243,10 @@ recipesRouter.get('/', async (req: any, res: any) => {
 
     const result: Recipe[] = recipes.map((recipe: Recipe) => {
       const recipeIngredients: RecipeIngredient[] = queriedIngredients
-        .filter((ingredient: RecipeIngredientDetailed) => ingredient.recipe_id === recipe.id)
+        .filter(
+          (ingredient: RecipeIngredientDetailed) =>
+            ingredient.recipe_id === recipe.id
+        )
         .map((ingredient: RecipeIngredientDetailed) => {
           const {
             ingredient_number_of,
@@ -251,14 +270,14 @@ recipesRouter.get('/', async (req: any, res: any) => {
           };
         });
 
-			const recipeCostPerServe = recipe.servings
-			?	costPerServe(recipe.servings, recipeIngredients)
-			: 0 
+      const recipeCostPerServe = recipe.servings
+        ? costPerServe(recipe.servings, recipeIngredients)
+        : 0;
 
       return {
         ...recipe,
         recipeIngredients,
-        costPerServe: recipeCostPerServe
+        costPerServe: recipeCostPerServe,
       };
     });
 
@@ -270,13 +289,13 @@ recipesRouter.get('/', async (req: any, res: any) => {
 });
 
 recipesRouter.get('/:id', async (req: any, res: any) => {
-	const { id } = req.params;
+  const { id } = req.params;
   try {
     console.log(`/recipes/${id} GET request received`);
     const returnedRecipe = await db.select().from('recipe').where('id', id);
-		const recipe: Recipe = returnedRecipe[0]
-    const recipeId = recipe.id
-		
+    const recipe: Recipe = returnedRecipe[0];
+    const recipeId = recipe.id;
+
     const ingredients = await db('recipe_ingredient as ri')
       .select(
         'i.id as ingredient_id',
@@ -292,41 +311,44 @@ recipesRouter.get('/:id', async (req: any, res: any) => {
       .leftJoin('ingredient as i', 'i.id', 'ri.ingredient_id')
       .where('ri.recipe_id', recipeId);
 
-		const recipeIngredients: RecipeIngredient[] = ingredients
-			.filter((ingredient: RecipeIngredientDetailed) => ingredient.recipe_id === recipeId)
-			.map((ingredient: RecipeIngredientDetailed) => {
-				const {
-					ingredient_number_of,
-					ingredient_cost_per,
-					ingredient_measurement_unit,
-					recipe_number_of,
-					recipe_measurement_unit,
-					recipe_id,
-					...rest
-				} = ingredient;
-				return {
-					...rest,
-					recipe_number_of,
-					recipe_measurement_unit,
-					derivedCost: deriveCost(
-						ingredient_number_of,
-						ingredient_cost_per,
-						ingredient_measurement_unit,
-						recipe_number_of,
-						recipe_measurement_unit
-					),
-				};
-			});
+    const recipeIngredients: RecipeIngredient[] = ingredients
+      .filter(
+        (ingredient: RecipeIngredientDetailed) =>
+          ingredient.recipe_id === recipeId
+      )
+      .map((ingredient: RecipeIngredientDetailed) => {
+        const {
+          ingredient_number_of,
+          ingredient_cost_per,
+          ingredient_measurement_unit,
+          recipe_number_of,
+          recipe_measurement_unit,
+          recipe_id,
+          ...rest
+        } = ingredient;
+        return {
+          ...rest,
+          recipe_number_of,
+          recipe_measurement_unit,
+          derivedCost: deriveCost(
+            ingredient_number_of,
+            ingredient_cost_per,
+            ingredient_measurement_unit,
+            recipe_number_of,
+            recipe_measurement_unit
+          ),
+        };
+      });
 
-		const recipeCostPerServe = recipe.servings
-		?	costPerServe(recipe.servings, recipeIngredients)
-		: 0 
+    const recipeCostPerServe = recipe.servings
+      ? costPerServe(recipe.servings, recipeIngredients)
+      : 0;
 
-		const result: Recipe = {
-			...recipe,
-			recipeIngredients,
-			costPerServe: recipeCostPerServe
-		};
+    const result: Recipe = {
+      ...recipe,
+      recipeIngredients,
+      costPerServe: recipeCostPerServe,
+    };
 
     res.send(result);
   } catch (error) {
@@ -347,8 +369,9 @@ recipesRouter.post('/', async (req: any, res: any) => {
         .into('recipe')
         .transacting(trx);
 
-      const ingredientPromises = recipeIngredients.map((ingredient: RecipeIngredientDetailed) =>
-        addRecipeIngredient(trx, recipeId, ingredient)
+      const ingredientPromises = recipeIngredients.map(
+        (ingredient: RecipeIngredientDetailed) =>
+          addRecipeIngredient(trx, recipeId, ingredient)
       );
 
       await Promise.all(ingredientPromises);
