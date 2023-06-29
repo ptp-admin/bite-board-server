@@ -6,7 +6,7 @@ const db = require('../utils/database');
 interface DbShoppingList {
   id: number;
   name: string;
-  created_at: string;
+  created_at: Date;
 }
 
 interface DbShoppingListRecipe {
@@ -24,9 +24,9 @@ interface ShoppingListRecipe {
 interface ShoppingList {
   id?: number;
   name: string;
-  shoppingListRecipeIdsAndServings?: ShoppingListRecipe[];
-  shoppingListRecipes?: Recipe[];
-  createdAt?: string; // TODO maybe convert into a timestamp?
+  shoppingListRecipes?: ShoppingListRecipe[];
+  recipes?: Recipe[];
+  createdAt?: string;
 }
 
 const addShoppingListRecipe = async (
