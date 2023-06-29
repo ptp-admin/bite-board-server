@@ -5,7 +5,7 @@ const db = require('./utils/database');
 const app = express();
 const ingredientsRouter = require('./controllers/ingredients');
 const recipesRouter = require('./controllers/recipes');
-const shoppingListRouter = require('./controllers/shoppingList');
+const shoppingListRouter = require('./controllers/shoppingLists');
 
 const port = process.env.PORT;
 
