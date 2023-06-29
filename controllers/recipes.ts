@@ -347,11 +347,13 @@ recipesRouter.post('/', async (req: any, res: any) => {
         .into('recipe')
         .transacting(trx);
 
-      const ingredientPromises = recipeIngredients.map((ingredient: RecipeIngredientDetailed) =>
+			if (recipeIngredients){
+				const ingredientPromises = recipeIngredients.map((ingredient: RecipeIngredientDetailed) =>
         addRecipeIngredient(trx, recipeId, ingredient)
       );
 
       await Promise.all(ingredientPromises);
+			}
     });
 
     const successMessage = `Successfully added ${name} and all ingredients to the database`;
