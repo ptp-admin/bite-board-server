@@ -1,4 +1,4 @@
-import Recipe from './recipes';
+import type { Recipe } from '../types/data';
 
 const shoppingListRouter = require('express').Router();
 const db = require('../utils/database');
