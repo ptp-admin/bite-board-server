@@ -45,7 +45,7 @@ const addShoppingListRecipe = async (
 };
 
 shoppingListRouter.post('/', async (req: any, res: any) => {
-  console.log('/shoppingList/ POST request received');
+  console.log('/shopping-lists/ POST request received');
 
   const { name, shoppingListRecipeIdsAndServings } = req.body;
   console.log(name, shoppingListRecipeIdsAndServings);
