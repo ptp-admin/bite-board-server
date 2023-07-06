@@ -26,7 +26,7 @@ interface ShoppingList {
   name: string;
   shoppingListRecipes?: ShoppingListRecipe[];
   recipes?: Recipe[];
-  createdAt?: string;
+  createdAt?: Date;
 }
 
 const addShoppingListRecipe = async (
