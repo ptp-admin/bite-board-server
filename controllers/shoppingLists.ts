@@ -1,6 +1,6 @@
 import type { Recipe } from '../types/data';
 
-const shoppingListRouter = require('express').Router();
+const shoppingListsRouter = require('express').Router();
 const db = require('../utils/database');
 
 interface DbShoppingList {
@@ -44,7 +44,7 @@ const addShoppingListRecipe = async (
     .transacting(trx);
 };
 
-shoppingListRouter.post('/', async (req: any, res: any) => {
+shoppingListsRouter.post('/', async (req: any, res: any) => {
   console.log('/shopping-lists/ POST request received');
 
   const { name, shoppingListRecipeIdsAndServings } = req.body;
@@ -82,11 +82,11 @@ shoppingListRouter.post('/', async (req: any, res: any) => {
   }
 });
 
-shoppingListRouter.put('/:id', async (req: any, res: any) => {
+shoppingListsRouter.put('/:id', async (req: any, res: any) => {
   // updating a shopping list here
 });
 
-shoppingListRouter.get('/', async (req: any, res: any) => {
+shoppingListsRouter.get('/', async (req: any, res: any) => {
   console.log('/shopping-lists/ GET request recieved');
 
   try {
@@ -98,7 +98,7 @@ shoppingListRouter.get('/', async (req: any, res: any) => {
   }
 });
 
-shoppingListRouter.get('/:id', async (req: any, res: any) => {
+shoppingListsRouter.get('/:id', async (req: any, res: any) => {
   console.log('/shopping-lists/:id GET request recieved');
   const { id } = req.params;
 
@@ -118,9 +118,9 @@ shoppingListRouter.get('/:id', async (req: any, res: any) => {
   }
 });
 
-shoppingListRouter.delete('/:id', async (req: any, res: any) => {
+shoppingListsRouter.delete('/:id', async (req: any, res: any) => {
   // deleting a shopping list
 });
 
-module.exports = shoppingListRouter;
+module.exports = shoppingListsRouter;
 export {};
