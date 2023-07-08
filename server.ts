@@ -14,7 +14,7 @@ app.use(express.static('build'));
 
 app.use('/ingredients', ingredientsRouter);
 app.use('/recipes', recipesRouter);
-app.use('/shoppingList', shoppingListRouter);
+app.use('/shopping-lists', shoppingListRouter);
 
 app.listen(port, () => {
   console.log(`Server started. Listening on port ${port}`);

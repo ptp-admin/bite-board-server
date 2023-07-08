@@ -26,7 +26,7 @@ interface ShoppingList {
   name: string;
   shoppingListRecipes?: ShoppingListRecipe[];
   recipes?: Recipe[];
-  createdAt?: string;
+  createdAt?: Date;
 }
 
 const addShoppingListRecipe = async (
@@ -45,7 +45,7 @@ const addShoppingListRecipe = async (
 };
 
 shoppingListRouter.post('/', async (req: any, res: any) => {
-  console.log('/shoppingList/ POST request received');
+  console.log('/shopping-lists/ POST request received');
 
   const { name, shoppingListRecipeIdsAndServings } = req.body;
   console.log(name, shoppingListRecipeIdsAndServings);
@@ -87,12 +87,35 @@ shoppingListRouter.put('/:id', async (req: any, res: any) => {
 });
 
 shoppingListRouter.get('/', async (req: any, res: any) => {
-  res.send('You got a shopping list!');
-  // reading all shopping lists
+  console.log('/shopping-lists/ GET request recieved');
+
+  try {
+    const result = await db().select().from('shopping_list');
+    res.send(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(error);
+  }
 });
 
 shoppingListRouter.get('/:id', async (req: any, res: any) => {
-  // reading a shopping list
+  console.log('/shopping-lists/:id GET request recieved');
+  const { id } = req.params;
+
+  try {
+    const result = await db()
+      .select()
+      .from('shopping_list as sl')
+      .where('sl.id', id);
+
+    if (!result.length) {
+      return res.status(404).send('No such shopping list');
+    }
+    res.send(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(error);
+  }
 });
 
 shoppingListRouter.delete('/:id', async (req: any, res: any) => {
