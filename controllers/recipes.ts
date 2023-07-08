@@ -1,61 +1,36 @@
+import type {
+  DbRecipeIngredient,
+  DbRecipeIngredientDetailed,
+  Ingredient,
+  Recipe,
+  RecipeIngredient,
+} from '../types/data';
+
 const recipesRouter = require('express').Router();
 const db = require('../utils/database');
 const recipeMocks = require('../mockData/recipes');
 const convert = require('convert-units');
 
-export default interface Recipe {
-  id: number;
-  name: string;
-  method?: string;
-  servings?: number;
-  recipeIngredients?: RecipeIngredient[];
-  costPerServe?: number;
-}
-
-interface RecipeIngredient {
-  ingredient_id: number;
-  ingredient_name: string;
-  ingredient_category: string;
-  recipe_number_of: number;
-  derivedCost: number;
-}
-
-interface Ingredient {
-  ingredient_id: number;
-  ingredient_name: string;
-  ingredient_category: string;
-  ingredient_cost_per: number;
-  ingredient_number_of: number;
-  ingredient_measurement_unit: string; // TODO add a type for the unit enum and assign that type to this field
-}
-
-interface RecipeIngredientDetailed extends Ingredient {
-  recipe_number_of: number;
-  recipe_measurement_unit: string;
-  recipe_id: number;
-}
-
-const deriveCost = (
-  ingredient_number_of: number,
-  ingredient_cost_per: number,
-  ingredient_measurement_unit: string,
-  recipe_number_of: number,
-  recipe_measurement_unit: string
-) => {
+const deriveCost = ({
+  recipe_measurement_unit,
+  recipe_number_of,
+  measurement_unit,
+  number_of,
+  cost_per,
+}: DbRecipeIngredientDetailed) => {
   try {
     const scaleMulitplier = convert(1)
       .from(recipe_measurement_unit)
-      .to(ingredient_measurement_unit);
+      .to(measurement_unit);
 
-    const result =
-      recipe_number_of *
-      ingredient_number_of *
-      ingredient_cost_per *
-      scaleMulitplier;
+    let result;
+    if (recipe_number_of && number_of && cost_per) {
+      result = recipe_number_of * number_of * cost_per * scaleMulitplier;
+    }
 
     return result;
   } catch (Error) {
-    return null;
+    return undefined;
   }
 };
 
@@ -64,7 +39,7 @@ const costPerServe = (
   recipe_ingredients: Array<RecipeIngredient>
 ) => {
   const total = recipe_ingredients.reduce(
-    (total, ingredient) => ingredient.derivedCost + total,
+    (total, ingredient) => ingredient.derivedCost || 0 + total,
     0
   );
 
@@ -76,98 +51,35 @@ const formatAsFloat2DecimalPlaces = (num: Number) => {
   return Number(Math.round(parseFloat(num + 'e2')) + 'e-2');
 };
 
-async function updateRecipe(recipeId: number, updatedFields: Recipe, trx: any) {
-  await db('recipe')
-    .update(updatedFields)
-    .where('id', recipeId)
-    .transacting(trx);
+async function updateRecipe(recipeId: number, recipe: Recipe, trx: any) {
+  console.log(recipe);
+
+  await db('recipe').update(recipe).where('id', recipeId).transacting(trx);
 }
 
 const addRecipeIngredient = async (
   trx: any,
   recipeId: number,
-  ingredient: RecipeIngredientDetailed
+  ingredient: RecipeIngredient
 ) => {
-  const {
-    ingredient_id,
-    ingredient_name,
-    ingredient_category,
-    ingredient_cost_per,
-    ingredient_number_of,
-    ingredient_measurement_unit,
-    recipe_measurement_unit,
-    recipe_number_of,
-  } = ingredient;
+  const { id, recipeMeasurementUnit, recipeNumberOf } = ingredient;
 
-  if (ingredient_id) {
-    const existingEntry = await db('recipe_ingredient')
-      .where({
-        ingredient_id,
-        recipe_id: recipeId,
-      })
-      .first();
+  // There must be an ingredient id provided
+  if (id) {
+    const recipeIngredient: DbRecipeIngredient = {
+      ingredient_id: id,
+      recipe_id: recipeId,
+      number_of: recipeNumberOf,
+      measurement_unit: recipeMeasurementUnit,
+    };
 
-    if (!existingEntry) {
-      await db('recipe_ingredient')
-        .insert({
-          ingredient_id,
-          recipe_id: recipeId,
-          number_of: recipe_number_of,
-          measurement_unit: recipe_measurement_unit,
-        })
-        .transacting(trx);
-    }
-  } else {
-    const existingIngredient = await db('ingredient')
-      .where('name', ingredient_name)
-      .first();
-
-    if (existingIngredient) {
-      const existingEntry = await db('recipe_ingredient')
-        .where({
-          ingredient_id: existingIngredient.id,
-          recipe_id: recipeId,
-        })
-        .first();
-
-      if (!existingEntry) {
-        await db('recipe_ingredient')
-          .insert({
-            ingredient_id: existingIngredient.id,
-            recipe_id: recipeId,
-            number_of: recipe_number_of,
-            measurement_unit: recipe_measurement_unit,
-          })
-          .transacting(trx);
-      }
-    } else {
-      const [ingredientId] = await db
-        .insert({
-          name: ingredient_name,
-          category: ingredient_category || null,
-          cost_per: ingredient_cost_per || null,
-          number_of: ingredient_number_of || null,
-          measurement_unit: ingredient_measurement_unit || null,
-        })
-        .returning('id')
-        .into('ingredient')
-        .transacting(trx);
-
-      await db('recipe_ingredient')
-        .insert({
-          ingredient_id: ingredientId,
-          recipe_id: recipeId,
-          number_of: recipe_number_of,
-          measurement_unit: recipe_measurement_unit,
-        })
-        .transacting(trx);
-    }
+    await db('recipe_ingredient').insert(recipeIngredient).transacting(trx);
   }
 };
 
 async function addRecipeIngredients(
   recipeId: number,
-  ingredients: RecipeIngredientDetailed[],
+  ingredients: DbRecipeIngredientDetailed[],
   trx: any
 ) {
   for (const ingredient of ingredients) {
@@ -177,21 +89,20 @@ async function addRecipeIngredients(
 
 async function updateRecipeIngredients(
   recipeId: number,
-  ingredients: RecipeIngredientDetailed[],
+  ingredients: RecipeIngredient[],
   trx: any
 ) {
   for (const ingredient of ingredients) {
-    const { ingredient_id, recipe_number_of, recipe_measurement_unit } =
-      ingredient;
+    const { id, recipeNumberOf, recipeMeasurementUnit } = ingredient;
     const updatedFields = {
-      number_of: recipe_number_of,
-      measurement_unit: recipe_measurement_unit,
+      number_of: recipeNumberOf,
+      measurement_unit: recipeMeasurementUnit,
     };
 
     await db('recipe_ingredient')
       .update(updatedFields)
       .where({
-        ingredient_id,
+        ingredient_id: id,
         recipe_id: recipeId,
       })
       .transacting(trx);
@@ -206,7 +117,7 @@ async function removeRecipeIngredients(
   const removeIngredientPromises = ingredients.map(async (ingredient) => {
     await db('recipe_ingredient')
       .where({
-        ingredient_id: ingredient.ingredient_id,
+        ingredient_id: ingredient.id,
         recipe_id: recipeId,
       })
       .del()
@@ -226,14 +137,16 @@ recipesRouter.get('/', async (req: any, res: any) => {
     console.log('/recipes/ GET request received');
     const recipes = await db.select().from('recipe');
     const recipeIds = recipes.map((recipe: Recipe) => recipe.id);
-    const queriedIngredients = await db('recipe_ingredient as ri')
+    const queriedIngredients: DbRecipeIngredientDetailed[] = await db(
+      'recipe_ingredient as ri'
+    )
       .select(
-        'i.id as ingredient_id',
-        'i.name as ingredient_name',
-        'i.category as ingredient_category',
-        'i.cost_per as ingredient_cost_per',
-        'i.number_of as ingredient_number_of',
-        'i.measurement_unit as ingredient_measurement_unit',
+        'i.id',
+        'i.name',
+        'i.category',
+        'i.cost_per',
+        'i.number_of',
+        'i.measurement_unit',
         'ri.recipe_id',
         'ri.number_of as recipe_number_of',
         'ri.measurement_unit as recipe_measurement_unit'
@@ -243,31 +156,31 @@ recipesRouter.get('/', async (req: any, res: any) => {
 
     const result: Recipe[] = recipes.map((recipe: Recipe) => {
       const recipeIngredients: RecipeIngredient[] = queriedIngredients
-        .filter(
-          (ingredient: RecipeIngredientDetailed) =>
-            ingredient.recipe_id === recipe.id
-        )
-        .map((ingredient: RecipeIngredientDetailed) => {
+        .filter((ingredient) => ingredient.recipe_id === recipe.id)
+        .map((ingredient: DbRecipeIngredientDetailed) => {
           const {
-            ingredient_number_of,
-            ingredient_cost_per,
-            ingredient_measurement_unit,
+            number_of,
+            cost_per,
+            measurement_unit,
             recipe_number_of,
             recipe_measurement_unit,
             recipe_id,
             ...rest
           } = ingredient;
-          return {
+
+          const derivedCost = deriveCost(ingredient);
+
+          const recipeIngredient: RecipeIngredient = {
             ...rest,
-            recipe_number_of,
-            derivedCost: deriveCost(
-              ingredient_number_of,
-              ingredient_cost_per,
-              ingredient_measurement_unit,
-              recipe_number_of,
-              recipe_measurement_unit
-            ),
+            costPer: cost_per,
+            numberOf: number_of,
+            measurementUnit: measurement_unit,
+            recipeNumberOf: recipe_number_of,
+            recipeMeasurementUnit: recipe_measurement_unit,
+            derivedCost,
           };
+
+          return recipeIngredient;
         });
 
       const recipeCostPerServe = recipe.servings
@@ -296,14 +209,16 @@ recipesRouter.get('/:id', async (req: any, res: any) => {
     const recipe: Recipe = returnedRecipe[0];
     const recipeId = recipe.id;
 
-    const ingredients = await db('recipe_ingredient as ri')
+    const queriedIngredients: DbRecipeIngredientDetailed[] = await db(
+      'recipe_ingredient as ri'
+    )
       .select(
-        'i.id as ingredient_id',
-        'i.name as ingredient_name',
-        'i.category as ingredient_category',
-        'i.cost_per as ingredient_cost_per',
-        'i.number_of as ingredient_number_of',
-        'i.measurement_unit as ingredient_measurement_unit',
+        'i.id',
+        'i.name',
+        'i.category',
+        'i.cost_per',
+        'i.number_of',
+        'i.measurement_unit',
         'ri.recipe_id',
         'ri.number_of as recipe_number_of',
         'ri.measurement_unit as recipe_measurement_unit'
@@ -311,33 +226,32 @@ recipesRouter.get('/:id', async (req: any, res: any) => {
       .leftJoin('ingredient as i', 'i.id', 'ri.ingredient_id')
       .where('ri.recipe_id', recipeId);
 
-    const recipeIngredients: RecipeIngredient[] = ingredients
-      .filter(
-        (ingredient: RecipeIngredientDetailed) =>
-          ingredient.recipe_id === recipeId
-      )
-      .map((ingredient: RecipeIngredientDetailed) => {
+    const recipeIngredients: RecipeIngredient[] = queriedIngredients
+      .filter((ingredient) => ingredient.recipe_id === recipe.id)
+      .map((ingredient: DbRecipeIngredientDetailed) => {
         const {
-          ingredient_number_of,
-          ingredient_cost_per,
-          ingredient_measurement_unit,
+          number_of,
+          cost_per,
+          measurement_unit,
           recipe_number_of,
           recipe_measurement_unit,
           recipe_id,
           ...rest
         } = ingredient;
-        return {
+
+        const derivedCost = deriveCost(ingredient);
+
+        const recipeIngredient: RecipeIngredient = {
           ...rest,
-          recipe_number_of,
-          recipe_measurement_unit,
-          derivedCost: deriveCost(
-            ingredient_number_of,
-            ingredient_cost_per,
-            ingredient_measurement_unit,
-            recipe_number_of,
-            recipe_measurement_unit
-          ),
+          costPer: cost_per,
+          numberOf: number_of,
+          measurementUnit: measurement_unit,
+          recipeNumberOf: recipe_number_of,
+          recipeMeasurementUnit: recipe_measurement_unit,
+          derivedCost,
         };
+
+        return recipeIngredient;
       });
 
     const recipeCostPerServe = recipe.servings
@@ -371,8 +285,9 @@ recipesRouter.post('/', async (req: any, res: any) => {
 
       if (recipeIngredients) {
         const ingredientPromises = recipeIngredients.map(
-          (ingredient: RecipeIngredientDetailed) =>
-            addRecipeIngredient(trx, recipeId, ingredient)
+          (ingredient: RecipeIngredient) => {
+            addRecipeIngredient(trx, recipeId, ingredient);
+          }
         );
 
         await Promise.all(ingredientPromises);
