@@ -1,6 +1,7 @@
 import type {
   DbRecipeIngredient,
   DbRecipeIngredientDetailed,
+	DbIngredient,
   Ingredient,
   Recipe,
   RecipeIngredient,
@@ -284,6 +285,34 @@ recipesRouter.post('/', async (req: any, res: any) => {
         .transacting(trx);
 
       if (recipeIngredients) {
+				const newIngredients = recipeIngredients
+					.filter((ingredient: RecipeIngredient) => !ingredient.id)
+					.map(async (ingredient: RecipeIngredient) => {
+						const newIngredient: DbIngredient = {
+							name: ingredient.name,
+							category: '',
+							cost_per: 0,
+							number_of: 0
+						};
+
+						try {
+							ingredient.id = await db
+								.insert(newIngredient)
+								.returning('id')
+								.into('ingredient')
+								.transacting(trx)
+								.then(([id]: [number]) => id);
+						} catch (error) {
+							console.error(error);
+							res.status(500).send(error);
+						}
+
+						return ingredient;
+					})
+				
+				// I'm honestly not sure how/why this works, but resolving these promises somehow adds the ingredients with ids back into recipeIngredients
+				await Promise.all(newIngredients)
+				
         const ingredientPromises = recipeIngredients.map(
           (ingredient: RecipeIngredient) => {
             addRecipeIngredient(trx, recipeId, ingredient);
@@ -292,11 +321,10 @@ recipesRouter.post('/', async (req: any, res: any) => {
 
         await Promise.all(ingredientPromises);
       }
+			const successMessage = `Successfully added ${name} and all ingredients to the database`;
+			console.log(successMessage);
+			res.send({message: successMessage, recipeId});
     });
-
-    const successMessage = `Successfully added ${name} and all ingredients to the database`;
-    console.log(successMessage);
-    res.send(successMessage);
   } catch (error) {
     console.error(error);
     res.status(500).send(error);
