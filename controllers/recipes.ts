@@ -1,7 +1,7 @@
 import type {
   DbRecipeIngredient,
   DbRecipeIngredientDetailed,
-	DbIngredient,
+  DbIngredient,
   Ingredient,
   Recipe,
   RecipeIngredient,
@@ -11,6 +11,7 @@ const recipesRouter = require('express').Router();
 const db = require('../utils/database');
 const recipeMocks = require('../mockData/recipes');
 const convert = require('convert-units');
+const _ = require('lodash');
 
 const deriveCost = ({
   recipe_measurement_unit,
@@ -285,34 +286,34 @@ recipesRouter.post('/', async (req: any, res: any) => {
         .transacting(trx);
 
       if (recipeIngredients) {
-				const newIngredients = recipeIngredients
-					.filter((ingredient: RecipeIngredient) => !ingredient.id)
-					.map(async (ingredient: RecipeIngredient) => {
-						const newIngredient: DbIngredient = {
-							name: ingredient.name,
-							category: '',
-							cost_per: 0,
-							number_of: 0
-						};
+        const newIngredients = recipeIngredients
+          .filter((ingredient: RecipeIngredient) => !ingredient.id)
+          .map(async (ingredient: RecipeIngredient) => {
+            const newIngredient: DbIngredient = {
+              name: ingredient.name,
+              category: '',
+              cost_per: 0,
+              number_of: 0,
+            };
 
-						try {
-							ingredient.id = await db
-								.insert(newIngredient)
-								.returning('id')
-								.into('ingredient')
-								.transacting(trx)
-								.then(([id]: [number]) => id);
-						} catch (error) {
-							console.error(error);
-							res.status(500).send(error);
-						}
+            try {
+              ingredient.id = await db
+                .insert(newIngredient)
+                .returning('id')
+                .into('ingredient')
+                .transacting(trx)
+                .then(([id]: [number]) => id);
+            } catch (error) {
+              console.error(error);
+              res.status(500).send(error);
+            }
 
-						return ingredient;
-					})
-				
-				// I'm honestly not sure how/why this works, but resolving these promises somehow adds the ingredients with ids back into recipeIngredients
-				await Promise.all(newIngredients)
-				
+            return ingredient;
+          });
+
+        // I'm honestly not sure how/why this works, but resolving these promises somehow adds the ingredients with ids back into recipeIngredients
+        await Promise.all(newIngredients);
+
         const ingredientPromises = recipeIngredients.map(
           (ingredient: RecipeIngredient) => {
             addRecipeIngredient(trx, recipeId, ingredient);
@@ -321,9 +322,9 @@ recipesRouter.post('/', async (req: any, res: any) => {
 
         await Promise.all(ingredientPromises);
       }
-			const successMessage = `Successfully added ${name} and all ingredients to the database`;
-			console.log(successMessage);
-			res.send({message: successMessage, recipeId});
+      const successMessage = `Successfully added ${name} and all ingredients to the database`;
+      console.log(successMessage);
+      res.send({ message: successMessage, recipeId });
     });
   } catch (error) {
     console.error(error);
@@ -333,39 +334,133 @@ recipesRouter.post('/', async (req: any, res: any) => {
 
 recipesRouter.put('/:id', async (req: any, res: any) => {
   const { id } = req.params;
-  const { recipe, addIngredients, updateIngredients, removeIngredients } =
-    req.body;
-
+  console.log(`/recipes/${id} put request received`);
   try {
-    const existingRecipe = await db
+    // Find DB record of the recipe with specified ID
+    const dbExistingRecipe = await db
       .select()
       .from('recipe')
       .where('id', id)
       .first();
 
-    if (!existingRecipe) {
+    if (!dbExistingRecipe) {
       return res.status(404).send('Recipe not found');
     }
 
+    const { name } = dbExistingRecipe;
+
+    // Get list of recipe ingredients from DB
+    const dbExistingIngredients = await db
+      .select()
+      .from('recipe_ingredient')
+      .where('recipe_id', id);
+
+    // Destructure recipe ingredients from request
+    const { recipeIngredients, ...recipe } = req.body;
+    // If any request ingredients do not have an id, they are new ingredients and need to be added to the DB
+    const [existingIngredients, newIngredients] = _.partition(
+      recipeIngredients,
+      (i: Ingredient) => i.id
+    );
+
+    // Group existing by ingredient id for faster lookup
+    const existingIngredientsById = _.groupBy(existingIngredients, 'id');
+    const dbExistingIngredientsById = _.groupBy(
+      dbExistingIngredients,
+      'ingredient_id'
+    );
+
+    const newRecipeIngredients: RecipeIngredient[] = existingIngredients.filter(
+      (ing: RecipeIngredient) => !dbExistingIngredientsById[`${ing.id}`]
+    );
+
     await db.transaction(async (trx: any) => {
-      if (recipe) {
-        await updateRecipe(id, recipe, trx);
+      // Update recipe name and servings
+      await db('recipe').update(recipe).where('id', id).transacting(trx);
+
+      // Add new (non-existing in ingredients table) ingredients
+      for (const newIngredient of newIngredients) {
+        const ingredient_id = await db
+          .insert({ name: newIngredient.name })
+          .returning('id')
+          .into('ingredient')
+          .transacting(trx)
+          .then(([id]: [number]) => id);
+
+        const dbNewIngredient: DbRecipeIngredient = {
+          ingredient_id,
+          recipe_id: id,
+          number_of: newIngredient.recipeNumberOf || 0,
+          measurement_unit: newIngredient.recipeMeasurementUnit,
+        };
+
+        await db
+          .insert(dbNewIngredient)
+          .into('recipe_ingredient')
+          .transacting(trx);
       }
 
-      if (addIngredients) {
-        await addRecipeIngredients(id, addIngredients, trx);
+      for (const newRecipeIngredient of newRecipeIngredients) {
+        if (newRecipeIngredient.id) {
+          const dbNewIngredient: DbRecipeIngredient = {
+            ingredient_id: newRecipeIngredient.id,
+            recipe_id: id,
+            number_of: newRecipeIngredient.recipeNumberOf || 0,
+            measurement_unit: newRecipeIngredient.recipeMeasurementUnit,
+          };
+
+          await db
+            .insert(dbNewIngredient)
+            .into('recipe_ingredient')
+            .transacting(trx);
+        }
       }
 
-      if (updateIngredients) {
-        await updateRecipeIngredients(id, updateIngredients, trx);
+      // Iterate over DB recipe ingredients
+      for (const dbIngredient of dbExistingIngredients) {
+        const { ingredient_id } = dbIngredient;
+        // Check whether this recipe ingredient is found in the update request
+        const found = existingIngredientsById[`${ingredient_id}`];
+
+        if (!found) {
+          // Delete recipe_ingredient from DB
+          await db('recipe_ingredient')
+            .where({
+              ingredient_id: ingredient_id,
+              recipe_id: id,
+            })
+            .del()
+            .transacting(trx);
+        } else {
+          // Ingredient is present in the request, destructure it as requestIngredient
+          const [requestIngredient] = found;
+          // Check whether the request ingredient includes any updates
+          if (
+            dbIngredient.number_of !== requestIngredient.recipeNumberOf ||
+            dbIngredient.measurement_unit !==
+              requestIngredient.recipeMeasurementUnit
+          ) {
+            // Update recipe_ingredient in DB
+            const updatedFields = {
+              number_of: requestIngredient.recipeNumberOf,
+              measurement_unit: requestIngredient.recipeMeasurementUnit,
+            };
+
+            await db('recipe_ingredient')
+              .update(updatedFields)
+              .where({
+                ingredient_id: ingredient_id,
+                recipe_id: id,
+              })
+              .transacting(trx);
+          }
+        }
       }
 
-      if (removeIngredients) {
-        await removeRecipeIngredients(id, removeIngredients, trx);
-      }
+      const successMessage = `Successfully updated ${name} and all ingredients to the database`;
+      console.log(successMessage);
+      res.send({ message: successMessage, id });
     });
-
-    res.send(`Recipe with ID ${id} has been updated successfully.`);
   } catch (error) {
     console.error(error);
     res.status(500).send(error);
