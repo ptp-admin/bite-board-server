@@ -6,6 +6,7 @@ import type {
   Recipe,
   RecipeIngredient,
 } from '../types/data';
+import { getRecipeIngredients } from '../utils/recipes';
 
 const recipesRouter = require('express').Router();
 const db = require('../utils/database');
@@ -109,22 +110,7 @@ recipesRouter.get('/', async (req: any, res: any) => {
     console.log('/recipes/ GET request received');
     const recipes = await db.select().from('recipe');
     const recipeIds = recipes.map((recipe: Recipe) => recipe.id);
-    const queriedIngredients: DbRecipeIngredientDetailed[] = await db(
-      'recipe_ingredient as ri'
-    )
-      .select(
-        'i.id',
-        'i.name',
-        'i.category',
-        'i.cost_per',
-        'i.number_of',
-        'i.measurement_unit',
-        'ri.recipe_id',
-        'ri.number_of as recipe_number_of',
-        'ri.measurement_unit as recipe_measurement_unit'
-      )
-      .leftJoin('ingredient as i', 'i.id', 'ri.ingredient_id')
-      .whereIn('ri.recipe_id', recipeIds);
+    const queriedIngredients = await getRecipeIngredients(recipeIds);
 
     const result: Recipe[] = recipes.map((recipe: Recipe) => {
       const recipeIngredients: RecipeIngredient[] = queriedIngredients
@@ -155,7 +141,10 @@ recipesRouter.get('/', async (req: any, res: any) => {
           return recipeIngredient;
         });
 
-      const recipeCostPerServe: RecipeCostPerServe = costPerServe(recipe.servings || 1, recipeIngredients)
+      const recipeCostPerServe: RecipeCostPerServe = costPerServe(
+        recipe.servings || 1,
+        recipeIngredients
+      );
 
       return {
         ...recipe,
@@ -178,23 +167,7 @@ recipesRouter.get('/:id', async (req: any, res: any) => {
     const returnedRecipe = await db.select().from('recipe').where('id', id);
     const recipe: Recipe = returnedRecipe[0];
     const recipeId = recipe.id;
-
-    const queriedIngredients: DbRecipeIngredientDetailed[] = await db(
-      'recipe_ingredient as ri'
-    )
-      .select(
-        'i.id',
-        'i.name',
-        'i.category',
-        'i.cost_per',
-        'i.number_of',
-        'i.measurement_unit',
-        'ri.recipe_id',
-        'ri.number_of as recipe_number_of',
-        'ri.measurement_unit as recipe_measurement_unit'
-      )
-      .leftJoin('ingredient as i', 'i.id', 'ri.ingredient_id')
-      .where('ri.recipe_id', recipeId);
+    const queriedIngredients = await getRecipeIngredients([recipeId]);
 
     const recipeIngredients: RecipeIngredient[] = queriedIngredients
       .filter((ingredient) => ingredient.recipe_id === recipe.id)
@@ -224,7 +197,10 @@ recipesRouter.get('/:id', async (req: any, res: any) => {
         return recipeIngredient;
       });
 
-		const recipeCostPerServe: RecipeCostPerServe = costPerServe(recipe.servings || 1, recipeIngredients)
+    const recipeCostPerServe: RecipeCostPerServe = costPerServe(
+      recipe.servings || 1,
+      recipeIngredients
+    );
 
     const result: Recipe = {
       ...recipe,
