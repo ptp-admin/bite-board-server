@@ -13,6 +13,16 @@ const recipeMocks = require('../mockData/recipes');
 const convert = require('convert-units');
 const _ = require('lodash');
 
+interface CostPerServeAccumulator {
+  total: number;
+  costedIngredientsCount: number;
+}
+
+interface RecipeCostPerServe {
+  costPerServe?: number;
+  costAccuracy?: number;
+}
+
 const deriveCost = ({
   recipe_measurement_unit,
   recipe_number_of,
@@ -21,16 +31,17 @@ const deriveCost = ({
   cost_per,
 }: DbRecipeIngredientDetailed) => {
   try {
-    const scaleMulitplier = convert(1)
-      .from(recipe_measurement_unit)
-      .to(measurement_unit);
-
-    let result;
     if (recipe_number_of && number_of && cost_per) {
-      result = recipe_number_of * number_of * cost_per * scaleMulitplier;
+      if (recipe_measurement_unit === measurement_unit)
+        return (recipe_number_of / number_of) * cost_per;
+
+      const scaleMulitplier = convert(1)
+        .from(recipe_measurement_unit)
+        .to(measurement_unit);
+      return ((recipe_number_of * scaleMulitplier) / number_of) * cost_per;
     }
 
-    return result;
+    return undefined;
   } catch (Error) {
     return undefined;
   }
@@ -39,25 +50,34 @@ const deriveCost = ({
 const costPerServe = (
   servings: number,
   recipe_ingredients: Array<RecipeIngredient>
-) => {
-  const total = recipe_ingredients.reduce(
-    (total, ingredient) => ingredient.derivedCost || 0 + total,
-    0
+): RecipeCostPerServe => {
+  const { total, costedIngredientsCount } = recipe_ingredients.reduce(
+    (
+      { total, costedIngredientsCount }: CostPerServeAccumulator,
+      ingredient
+    ) => {
+      return {
+        total: total + (ingredient.derivedCost || 0),
+        costedIngredientsCount: ingredient.derivedCost
+          ? (costedIngredientsCount += 1)
+          : costedIngredientsCount,
+      };
+    },
+    { total: 0, costedIngredientsCount: 0 }
   );
 
-  return formatAsFloat2DecimalPlaces(total / servings);
+  return {
+    costPerServe: formatAsFloat2DecimalPlaces(total / servings),
+    costAccuracy: formatAsFloat2DecimalPlaces(
+      costedIngredientsCount / recipe_ingredients.length
+    ),
+  };
 };
 
 const formatAsFloat2DecimalPlaces = (num: Number) => {
   if (!num) return 0;
   return Number(Math.round(parseFloat(num + 'e2')) + 'e-2');
 };
-
-async function updateRecipe(recipeId: number, recipe: Recipe, trx: any) {
-  console.log(recipe);
-
-  await db('recipe').update(recipe).where('id', recipeId).transacting(trx);
-}
 
 const addRecipeIngredient = async (
   trx: any,
@@ -78,56 +98,6 @@ const addRecipeIngredient = async (
     await db('recipe_ingredient').insert(recipeIngredient).transacting(trx);
   }
 };
-
-async function addRecipeIngredients(
-  recipeId: number,
-  ingredients: DbRecipeIngredientDetailed[],
-  trx: any
-) {
-  for (const ingredient of ingredients) {
-    await addRecipeIngredient(trx, recipeId, ingredient);
-  }
-}
-
-async function updateRecipeIngredients(
-  recipeId: number,
-  ingredients: RecipeIngredient[],
-  trx: any
-) {
-  for (const ingredient of ingredients) {
-    const { id, recipeNumberOf, recipeMeasurementUnit } = ingredient;
-    const updatedFields = {
-      number_of: recipeNumberOf,
-      measurement_unit: recipeMeasurementUnit,
-    };
-
-    await db('recipe_ingredient')
-      .update(updatedFields)
-      .where({
-        ingredient_id: id,
-        recipe_id: recipeId,
-      })
-      .transacting(trx);
-  }
-}
-
-async function removeRecipeIngredients(
-  recipeId: number,
-  ingredients: Ingredient[],
-  trx: any
-) {
-  const removeIngredientPromises = ingredients.map(async (ingredient) => {
-    await db('recipe_ingredient')
-      .where({
-        ingredient_id: ingredient.id,
-        recipe_id: recipeId,
-      })
-      .del()
-      .transacting(trx);
-  });
-
-  await Promise.all(removeIngredientPromises);
-}
 
 recipesRouter.get('/mock', (req: any, res: any) => {
   console.log('/recipes/mock GET request received');
@@ -185,14 +155,12 @@ recipesRouter.get('/', async (req: any, res: any) => {
           return recipeIngredient;
         });
 
-      const recipeCostPerServe = recipe.servings
-        ? costPerServe(recipe.servings, recipeIngredients)
-        : 0;
+      const recipeCostPerServe: RecipeCostPerServe = costPerServe(recipe.servings || 1, recipeIngredients)
 
       return {
         ...recipe,
         recipeIngredients,
-        costPerServe: recipeCostPerServe,
+        ...recipeCostPerServe,
       };
     });
 
@@ -256,14 +224,12 @@ recipesRouter.get('/:id', async (req: any, res: any) => {
         return recipeIngredient;
       });
 
-    const recipeCostPerServe = recipe.servings
-      ? costPerServe(recipe.servings, recipeIngredients)
-      : 0;
+		const recipeCostPerServe: RecipeCostPerServe = costPerServe(recipe.servings || 1, recipeIngredients)
 
     const result: Recipe = {
       ...recipe,
       recipeIngredients,
-      costPerServe: recipeCostPerServe,
+      ...recipeCostPerServe,
     };
 
     res.send(result);

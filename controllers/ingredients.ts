@@ -133,22 +133,20 @@ ingredientsRouter.delete('/:id', (req: any, res: any) => {
   console.log('/ingredients/ DELETE request recieved');
   const id = req.params.id;
 
-  try {
-    db('ingredient')
-      .where('id', id)
-      .del()
-      .then(console.log(`deleted record with id: ${id}`))
-      .then(() => {
-        db.select()
-          .from('ingredient')
-          .then((response: any) => res.send(response));
-      });
-  } catch (error) {
-    // TODO: This aint working
-    console.error(error);
-    res.status(500).send(error);
-  }
+  db('ingredient')
+    .where('id', id)
+    .del()
+    .then(console.log(`deleted record with id: ${id}`))
+    .then(() => {
+      db.select()
+        .from('ingredient')
+        .then((response: any) => res.send(response));
+    })
+    .catch((error: any) => {
+      console.error(error);
+      res.status(500).send(error);
+    });
 });
 
 module.exports = ingredientsRouter;
-export {};
+export { };
