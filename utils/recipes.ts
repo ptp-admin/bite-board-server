@@ -12,6 +12,7 @@ export async function getRecipeIngredients(
       'i.cost_per',
       'i.number_of',
       'i.measurement_unit',
+      'i.category',
       'ri.recipe_id',
       'ri.number_of as recipe_number_of',
       'ri.measurement_unit as recipe_measurement_unit'

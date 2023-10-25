@@ -1,33 +1,16 @@
-import type { Recipe } from '../types/data';
+import type {
+  DbShoppingList,
+  DbShoppingListRecipe,
+  Recipe,
+  ShoppingList,
+  ShoppingListRecipe,
+  ShoppingListWithRecipes,
+} from '../types/data';
+import { getRecipeIngredients } from '../utils/recipes';
+import { getShoppingListRecipes } from '../utils/shoppingLists';
 
 const shoppingListsRouter = require('express').Router();
 const db = require('../utils/database');
-
-interface DbShoppingList {
-  id: number;
-  name: string;
-  created_at: Date;
-}
-
-interface DbShoppingListRecipe {
-  shopping_list_id?: number;
-  recipe_id: number;
-  servings: number;
-}
-
-interface ShoppingListRecipe {
-  shoppingListId?: number;
-  recipeId: number;
-  servings: number;
-}
-
-interface ShoppingList {
-  id?: number;
-  name: string;
-  shoppingListRecipes?: ShoppingListRecipe[];
-  recipes?: Recipe[];
-  createdAt?: Date;
-}
 
 const addShoppingListRecipe = async (
   trx: any,
@@ -89,13 +72,97 @@ shoppingListsRouter.put('/:id', async (req: any, res: any) => {
 shoppingListsRouter.get('/', async (req: any, res: any) => {
   console.log('/shopping-lists/ GET request recieved');
 
-  try {
-    const result = await db().select().from('shopping_list');
-    res.send(result);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send(error);
-  }
+  const shoppingLists = await db().select().from('shopping_list');
+
+  const shoppingListIds = shoppingLists.map(
+    (shoppingList: ShoppingList) => shoppingList.id
+  );
+
+  const queriedRecipes = await getShoppingListRecipes(shoppingListIds);
+  // console.log('QUERIED RECIPES', queriedRecipes);
+
+  const shoppingListsWithRecipes = shoppingLists.map(
+    (shoppingList: ShoppingList) => {
+      const recipeIds: Array<number> = [];
+      let totalServings = 0;
+      const shoppingListRecipes = queriedRecipes
+        .filter((recipe) => recipe.shopping_list_id === shoppingList.id)
+        .map((recipeResponse) => {
+          const { recipe_id, recipe_name, servings } = recipeResponse;
+
+          recipeIds.push(recipe_id);
+          totalServings += servings;
+          return { id: recipe_id, name: recipe_name, servings: servings };
+        });
+
+      // building the shopping lists with recipes object
+      const shoppingListWithRecipes = {
+        id: shoppingList.id,
+        name: shoppingList.name,
+        recipes: shoppingListRecipes,
+        recipeIds,
+        totalServings,
+      };
+      return shoppingListWithRecipes;
+    }
+  );
+
+  const allRecipeIds: Set<number> = new Set(
+    shoppingListsWithRecipes
+      .map(
+        (shoppingListWithRecipes: ShoppingListWithRecipes) =>
+          shoppingListWithRecipes.recipeIds
+      )
+      .flat()
+  );
+
+  const allIngredients = await getRecipeIngredients(Array.from(allRecipeIds));
+
+  const shoppingListsWithRecipesAndIngredients = shoppingListsWithRecipes.map(
+    (shoppingListWithRecipes: ShoppingListWithRecipes) => {
+      console.log(
+        shoppingListWithRecipes.id,
+        shoppingListWithRecipes.recipeIds
+      );
+      const shoppingListingredients = allIngredients
+        .filter((ingredient) =>
+          shoppingListWithRecipes.recipeIds.includes(ingredient.recipe_id)
+        )
+        .map((ingredientResponse) => {
+          const {
+            ingredient_id,
+            name,
+            category,
+            number_of,
+            recipe_measurement_unit,
+            recipe_id,
+          } = ingredientResponse;
+
+          return {
+            id: ingredient_id,
+            name,
+            category,
+            derivedCost: 'Going to have to calculate this',
+            numberOf: number_of,
+            unit: recipe_measurement_unit,
+            recipeId: recipe_id,
+          };
+        });
+
+      // TODO  need to get the shoppinglistIngredients collapsed/compressed here
+
+      const shoppingListWithRecipesAndIngredients = {
+        id: shoppingListWithRecipes.id,
+        name: shoppingListWithRecipes.name,
+        servings: shoppingListWithRecipes.totalServings,
+        cost: 'going to need to calculate this - maybe from total derived costs',
+        recipes: shoppingListWithRecipes.recipes,
+        ingredients: shoppingListingredients,
+      };
+      return shoppingListWithRecipesAndIngredients;
+    }
+  );
+  res.send(shoppingListsWithRecipesAndIngredients);
 });
 
 shoppingListsRouter.get('/:id', async (req: any, res: any) => {
