@@ -65,6 +65,24 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
   }
 });
 
+shoppingListsRouter.post('/:id/add-recipe/', async (req: any, res: any) => {
+  const shoppingListId = req.params.id
+  const { recipeId, servings } = req.body;
+
+  const result = await db('shopping_list_recipe')
+    .insert({
+      shopping_list_id: shoppingListId,
+      recipe_id: recipeId,
+      servings: servings,
+    }).catch((error: any) => {
+      console.error(error);
+      res.status(500).send(error);
+    });
+  const successMessage = `Successfully added recipe/${recipeId}/ to shopping-list/${shoppingListId}/`;
+  console.log(successMessage);
+  res.send(successMessage);
+});
+
 shoppingListsRouter.put('/:id', async (req: any, res: any) => {
   // updating a shopping list here
 });
@@ -186,4 +204,4 @@ shoppingListsRouter.delete('/:id', async (req: any, res: any) => {
 });
 
 module.exports = shoppingListsRouter;
-export {};
+export { };
