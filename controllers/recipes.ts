@@ -403,8 +403,7 @@ recipesRouter.put('/:id', async (req: any, res: any) => {
           // Check whether the request ingredient includes any updates
           if (
             dbIngredient.number_of !== requestIngredient.recipeNumberOf ||
-            dbIngredient.measurement_unit !==
-              requestIngredient.recipeMeasurementUnit
+            dbIngredient.measurement_unit !== requestIngredient.recipeMeasurementUnit
           ) {
             // Update recipe_ingredient in DB
             const updatedFields = {
@@ -459,11 +458,25 @@ recipesRouter.delete('/:id', async (req: any, res: any) => {
     const successMessage = `Successfully deleted recipe with ID ${recipeId}`;
     console.log(successMessage);
     res.send(successMessage);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send(error);
+  } catch (error: any) {
+    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+      const shoppingListRecipes = await db('shopping_list_recipe')
+        .whereIn('recipe_id', [recipeId])
+      const shoppingListIds = _.uniq(shoppingListRecipes.map((list: any) => list.shopping_list_id))
+      const shoppingLists = await db('shopping_list')
+        .whereIn('id', shoppingListIds)
+
+
+      error.data = {
+        message: "This recipe is included in a shopping list and can't be deleted. Please remove it from the shopping list first.",
+        shoppingLists: shoppingLists.map(({ name, id }: { name: string, id: number }) => {
+          return { name, id }
+        })
+      }
+    }
+    res.status(500).send(error.data);
   }
 });
 
 module.exports = recipesRouter;
-export {};
+export { };
