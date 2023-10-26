@@ -8,7 +8,7 @@ import type {
 } from '../types/data';
 import { getRecipeIngredients } from '../utils/recipes';
 import { getShoppingListRecipes } from '../utils/shoppingLists';
-import { deriveCost } from './recipes';
+import { deriveCost, formatAsFloat2DecimalPlaces } from './recipes';
 import { sumBy } from 'lodash';
 
 const shoppingListsRouter = require('express').Router();
@@ -173,12 +173,12 @@ shoppingListsRouter.get('/', async (req: any, res: any) => {
         });
 
       // TODO  need to get the shoppinglistIngredients collapsed/compressed here
-      
+      const shoppingListCost = formatAsFloat2DecimalPlaces(sumBy(shoppingListingredients, 'derivedCost'));
       const shoppingListWithRecipesAndIngredients = {
         id: shoppingListWithRecipes.id,
         name: shoppingListWithRecipes.name,
         servings: shoppingListWithRecipes.totalServings,
-        cost: sumBy(shoppingListingredients, 'derivedCost'),
+        cost: shoppingListCost,
         recipes: shoppingListWithRecipes.recipes,
         ingredients: shoppingListingredients,
       };

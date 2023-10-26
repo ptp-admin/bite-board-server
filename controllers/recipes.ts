@@ -440,6 +440,4 @@ recipesRouter.delete('/:id', async (req: any, res: any) => {
     res.status(500).send(error);
   }
 });
-export { deriveCost, recipesRouter };
-// module.exports = recipesRouter;
-
+export { deriveCost, recipesRouter, formatAsFloat2DecimalPlaces };
