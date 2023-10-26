@@ -9,7 +9,8 @@ export async function getShoppingListRecipes(
       'slr.shopping_list_id',
       'r.id as recipe_id',
       'r.name as recipe_name',
-      'slr.servings'
+      'slr.servings as shopping_list_servings',
+      'r.servings as recipe_servings'
     )
     .leftJoin('recipe as r', 'r.id', 'slr.recipe_id')
     .whereIn('slr.shopping_list_id', shoppingListIds);

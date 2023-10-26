@@ -59,7 +59,8 @@ export interface DbShoppingListRecipe {
   shopping_list_id?: number;
   recipe_id: number;
   recipe_name: string;
-  servings: number;
+  shopping_list_servings: number;
+  recipe_servings: number;
 }
 
 export interface ShoppingListRecipe {
@@ -72,6 +73,7 @@ export interface ShoppingListRecipeResponse {
   id: number;
   name: string;
   servings: number;
+  recipeServings: number;
 }
 
 export interface DbShoppingListIngredient {

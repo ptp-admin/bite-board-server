@@ -8,6 +8,8 @@ import type {
 } from '../types/data';
 import { getRecipeIngredients } from '../utils/recipes';
 import { getShoppingListRecipes } from '../utils/shoppingLists';
+import { deriveCost } from './recipes';
+import { sumBy } from 'lodash';
 
 const shoppingListsRouter = require('express').Router();
 const db = require('../utils/database');
@@ -105,12 +107,10 @@ shoppingListsRouter.get('/', async (req: any, res: any) => {
       let totalServings = 0;
       const shoppingListRecipes = queriedRecipes
         .filter((recipe) => recipe.shopping_list_id === shoppingList.id)
-        .map((recipeResponse) => {
-          const { recipe_id, recipe_name, servings } = recipeResponse;
-
+        .map(({ recipe_id, recipe_name, shopping_list_servings, recipe_servings }) => {
           recipeIds.push(recipe_id);
-          totalServings += servings;
-          return { id: recipe_id, name: recipe_name, servings: servings };
+          totalServings += shopping_list_servings;
+          return { id: recipe_id, name: recipe_name, servings: shopping_list_servings, recipeServings: recipe_servings };
         });
 
       // building the shopping lists with recipes object
@@ -127,11 +127,10 @@ shoppingListsRouter.get('/', async (req: any, res: any) => {
 
   const allRecipeIds: Set<number> = new Set(
     shoppingListsWithRecipes
-      .map(
+      .flatMap(
         (shoppingListWithRecipes: ShoppingListWithRecipes) =>
           shoppingListWithRecipes.recipeIds
       )
-      .flat()
   );
 
   const allIngredients = await getRecipeIngredients(Array.from(allRecipeIds));
@@ -143,33 +142,43 @@ shoppingListsRouter.get('/', async (req: any, res: any) => {
           shoppingListWithRecipes.recipeIds.includes(ingredient.recipe_id)
         )
         .map((ingredientResponse) => {
+          console.log('INGREDIENT RESPONSE', ingredientResponse);
+          
+          const ingredientRecipe = shoppingListWithRecipes.recipes.find(recipe => recipe.id === ingredientResponse.recipe_id)
+          let ingredientMultiplier = 1
+          if (ingredientRecipe)
+            ingredientMultiplier = ingredientRecipe.servings / ingredientRecipe.recipeServings
+          
           const {
             ingredient_id,
             name,
             category,
-            number_of,
+            recipe_number_of,
             recipe_measurement_unit,
             recipe_id,
           } = ingredientResponse;
+          ingredientResponse.recipe_number_of = recipe_number_of * ingredientMultiplier
+
+          const derivedCost = deriveCost(ingredientResponse);
 
           return {
             id: ingredient_id,
             name,
             category,
-            derivedCost: 'Going to have to calculate this',
-            numberOf: number_of,
+            derivedCost,
+            numberOf: recipe_number_of * ingredientMultiplier,
             unit: recipe_measurement_unit,
             recipeId: recipe_id,
           };
         });
 
       // TODO  need to get the shoppinglistIngredients collapsed/compressed here
-
+      
       const shoppingListWithRecipesAndIngredients = {
         id: shoppingListWithRecipes.id,
         name: shoppingListWithRecipes.name,
         servings: shoppingListWithRecipes.totalServings,
-        cost: 'going to need to calculate this - maybe from total derived costs',
+        cost: sumBy(shoppingListingredients, 'derivedCost'),
         recipes: shoppingListWithRecipes.recipes,
         ingredients: shoppingListingredients,
       };
