@@ -120,10 +120,6 @@ shoppingListsRouter.get('/', async (req: any, res: any) => {
 
   const shoppingListsWithRecipesAndIngredients = shoppingListsWithRecipes.map(
     (shoppingListWithRecipes: ShoppingListWithRecipes) => {
-      console.log(
-        shoppingListWithRecipes.id,
-        shoppingListWithRecipes.recipeIds
-      );
       const shoppingListingredients = allIngredients
         .filter((ingredient) =>
           shoppingListWithRecipes.recipeIds.includes(ingredient.recipe_id)
