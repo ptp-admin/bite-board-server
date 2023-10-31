@@ -6,7 +6,7 @@ export async function getRecipeIngredients(
 ): Promise<DbRecipeIngredientDetailed[]> {
   return await db('recipe_ingredient as ri')
     .select(
-      'i.id',
+      'i.id as ingredient_id',
       'i.name',
       'i.category',
       'i.cost_per',

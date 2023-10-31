@@ -77,11 +77,23 @@ export interface ShoppingListRecipeResponse {
 }
 
 export interface DbShoppingListIngredient {
-  //?
+  id: number;
+  name: string;
+  category?: string;
+  derivedCost?: number;
+  numberOf: number;
+  unit: string;
+  recipeId: number;
 }
 
 export interface ShoppingListIngredient {
-  //?
+  id: number;
+  name: string;
+  category: string;
+  derivedCost: number;
+  numberOf: number;
+  unit: string;
+  recipeIds: number[];
 }
 
 export interface DbShoppingList {
