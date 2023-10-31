@@ -7,7 +7,7 @@ import type {
   ShoppingListWithRecipes,
 } from '../types/data';
 import { getRecipeIngredients } from '../utils/recipes';
-import { getShoppingListRecipes } from '../utils/shoppingLists';
+import { getShoppingListRecipes, getShoppingListsRecipesWithIngredients } from '../utils/shoppingLists';
 import { deriveCost, formatAsFloat2DecimalPlaces } from './recipes';
 import { sumBy } from 'lodash';
 
@@ -98,110 +98,19 @@ shoppingListsRouter.get('/', async (req: any, res: any) => {
     (shoppingList: ShoppingList) => shoppingList.id
   );
 
-  const queriedRecipes = await getShoppingListRecipes(shoppingListIds);
-  // console.log('QUERIED RECIPES', queriedRecipes);
-
-  const shoppingListsWithRecipes = shoppingLists.map(
-    (shoppingList: ShoppingList) => {
-      const recipeIds: Array<number> = [];
-      let totalServings = 0;
-      const shoppingListRecipes = queriedRecipes
-        .filter((recipe) => recipe.shopping_list_id === shoppingList.id)
-        .map(({ recipe_id, recipe_name, shopping_list_servings, recipe_servings }) => {
-          recipeIds.push(recipe_id);
-          totalServings += shopping_list_servings;
-          return { id: recipe_id, name: recipe_name, servings: shopping_list_servings, recipeServings: recipe_servings };
-        });
-
-      // building the shopping lists with recipes object
-      const shoppingListWithRecipes = {
-        id: shoppingList.id,
-        name: shoppingList.name,
-        recipes: shoppingListRecipes,
-        recipeIds,
-        totalServings,
-      };
-      return shoppingListWithRecipes;
-    }
-  );
-
-  const allRecipeIds: Set<number> = new Set(
-    shoppingListsWithRecipes
-      .flatMap(
-        (shoppingListWithRecipes: ShoppingListWithRecipes) =>
-          shoppingListWithRecipes.recipeIds
-      )
-  );
-
-  const allIngredients = await getRecipeIngredients(Array.from(allRecipeIds));
-
-  const shoppingListsWithRecipesAndIngredients = shoppingListsWithRecipes.map(
-    (shoppingListWithRecipes: ShoppingListWithRecipes) => {
-      const shoppingListingredients = allIngredients
-        .filter((ingredient) =>
-          shoppingListWithRecipes.recipeIds.includes(ingredient.recipe_id)
-        )
-        .map((ingredientResponse) => {
-          console.log('INGREDIENT RESPONSE', ingredientResponse);
-          
-          const ingredientRecipe = shoppingListWithRecipes.recipes.find(recipe => recipe.id === ingredientResponse.recipe_id)
-          let ingredientMultiplier = 1
-          if (ingredientRecipe)
-            ingredientMultiplier = ingredientRecipe.servings / ingredientRecipe.recipeServings
-          
-          const {
-            ingredient_id,
-            name,
-            category,
-            recipe_number_of,
-            recipe_measurement_unit,
-            recipe_id,
-          } = ingredientResponse;
-          ingredientResponse.recipe_number_of = recipe_number_of * ingredientMultiplier
-
-          const derivedCost = deriveCost(ingredientResponse);
-
-          return {
-            id: ingredient_id,
-            name,
-            category,
-            derivedCost,
-            numberOf: recipe_number_of * ingredientMultiplier,
-            unit: recipe_measurement_unit,
-            recipeId: recipe_id,
-          };
-        });
-
-      // TODO  need to get the shoppinglistIngredients collapsed/compressed here
-      const shoppingListCost = formatAsFloat2DecimalPlaces(sumBy(shoppingListingredients, 'derivedCost'));
-      const shoppingListWithRecipesAndIngredients = {
-        id: shoppingListWithRecipes.id,
-        name: shoppingListWithRecipes.name,
-        servings: shoppingListWithRecipes.totalServings,
-        cost: shoppingListCost,
-        recipes: shoppingListWithRecipes.recipes,
-        ingredients: shoppingListingredients,
-      };
-      return shoppingListWithRecipesAndIngredients;
-    }
-  );
-  res.send(shoppingListsWithRecipesAndIngredients);
+  res.send(await getShoppingListsRecipesWithIngredients(shoppingListIds, shoppingLists));
 });
 
 shoppingListsRouter.get('/:id', async (req: any, res: any) => {
   console.log('/shopping-lists/:id GET request recieved');
   const { id } = req.params;
-
   try {
-    const result = await db()
+    const shoppingList = await db()
       .select()
       .from('shopping_list as sl')
       .where('sl.id', id);
-
-    if (!result.length) {
-      return res.status(404).send('No such shopping list');
-    }
-    res.send(result);
+    const result = await getShoppingListsRecipesWithIngredients([id], shoppingList)
+    res.send(result[0]);
   } catch (error) {
     console.error(error);
     res.status(500).send(error);
