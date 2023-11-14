@@ -35,8 +35,8 @@ const addShoppingListRecipe = async (
 shoppingListsRouter.post('/', async (req: any, res: any) => {
   console.log('/shopping-lists/ POST request received');
 
-  const { name, shoppingListRecipeIdsAndServings } = req.body;
-  console.log(name, shoppingListRecipeIdsAndServings);
+  const { name, recipeServings } = req.body;
+  console.log(name, recipeServings);
 
   try {
     await db.transaction(async (trx: any) => {
@@ -46,8 +46,8 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
         .into('shopping_list')
         .transacting(trx);
 
-      if (shoppingListRecipeIdsAndServings) {
-        const recipePromises = shoppingListRecipeIdsAndServings.map(
+      if (recipeServings) {
+        const recipePromises = recipeServings.map(
           (recipe: ShoppingListRecipe) =>
             addShoppingListRecipe(
               trx,
@@ -72,7 +72,7 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
 
 shoppingListsRouter.post('/:id/add-recipe/', async (req: any, res: any) => {
   console.log('/shopping-lists/:id/add-recipe/ POST request received');
-  const shoppingListId = req.params.id
+  const shoppingListId = req.params.id;
   const { recipeId, servings } = req.body;
 
   try {
@@ -128,7 +128,40 @@ shoppingListsRouter.get('/:id', async (req: any, res: any) => {
 });
 
 shoppingListsRouter.delete('/:id', async (req: any, res: any) => {
-  // deleting a shopping list
+  const shoppingListId: number = req.params.id;
+
+  try {
+    const existingShoppingList = await db('shopping_list')
+      .where('id', shoppingListId)
+      .first();
+
+    if (!existingShoppingList) {
+      const errorMessage = `A shopping list with ID ${shoppingListId} does not exist`;
+      console.log(errorMessage);
+      return res.status(404).send(errorMessage);
+    }
+
+    await db.transaction(async (trx: any) => {
+      // Delete shopping list
+      await db('shopping_list')
+        .where('id', shoppingListId)
+        .del()
+        .transacting(trx);
+
+      // Delete associated shopping_list_recipe
+      await db('shopping_list_recipe')
+        .where('shopping_list_id', shoppingListId)
+        .del()
+        .transacting(trx);
+    });
+
+    const successMessage = `Successfully deleted shopping list with ID ${shoppingListId}`;
+    console.log(successMessage);
+    res.send(successMessage);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(error);
+  }
 });
 
 module.exports = shoppingListsRouter;
