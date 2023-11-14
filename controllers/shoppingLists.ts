@@ -1,33 +1,21 @@
-import type { Recipe } from '../types/data';
+import type {
+  DbShoppingList,
+  DbShoppingListRecipe,
+  Recipe,
+  ShoppingList,
+  ShoppingListRecipe,
+  ShoppingListWithRecipes,
+} from '../types/data';
+import { getRecipeIngredients } from '../utils/recipes';
+import {
+  getShoppingListRecipes,
+  getShoppingListsRecipesWithIngredients,
+} from '../utils/shoppingLists';
+import { deriveCost, formatAsFloat2DecimalPlaces } from './recipes';
+import { sumBy } from 'lodash';
 
 const shoppingListsRouter = require('express').Router();
 const db = require('../utils/database');
-
-interface DbShoppingList {
-  id: number;
-  name: string;
-  created_at: Date;
-}
-
-interface DbShoppingListRecipe {
-  shopping_list_id?: number;
-  recipe_id: number;
-  servings: number;
-}
-
-interface ShoppingListRecipe {
-  shoppingListId?: number;
-  recipeId: number;
-  servings: number;
-}
-
-interface ShoppingList {
-  id?: number;
-  name: string;
-  shoppingListRecipes?: ShoppingListRecipe[];
-  recipes?: Recipe[];
-  createdAt?: Date;
-}
 
 const addShoppingListRecipe = async (
   trx: any,
@@ -82,6 +70,26 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
   }
 });
 
+shoppingListsRouter.post('/:id/add-recipe/', async (req: any, res: any) => {
+  console.log('/shopping-lists/:id/add-recipe/ POST request received');
+  const shoppingListId = req.params.id
+  const { recipeId, servings } = req.body;
+
+  try {
+    const result = await db('shopping_list_recipe').insert({
+      shopping_list_id: shoppingListId,
+      recipe_id: recipeId,
+      servings: servings,
+    });
+    const successMessage = `Successfully added recipe/${recipeId}/ to shopping-list/${shoppingListId}/`;
+    console.log(successMessage);
+    res.send(successMessage);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'An error occurred while inserting data.' });
+  }
+});
+
 shoppingListsRouter.put('/:id', async (req: any, res: any) => {
   // updating a shopping list here
 });
@@ -89,29 +97,30 @@ shoppingListsRouter.put('/:id', async (req: any, res: any) => {
 shoppingListsRouter.get('/', async (req: any, res: any) => {
   console.log('/shopping-lists/ GET request recieved');
 
-  try {
-    const result = await db().select().from('shopping_list');
-    res.send(result);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send(error);
-  }
+  const shoppingLists = await db().select().from('shopping_list');
+
+  const shoppingListIds = shoppingLists.map(
+    (shoppingList: ShoppingList) => shoppingList.id
+  );
+
+  res.send(
+    await getShoppingListsRecipesWithIngredients(shoppingListIds, shoppingLists)
+  );
 });
 
 shoppingListsRouter.get('/:id', async (req: any, res: any) => {
   console.log('/shopping-lists/:id GET request recieved');
   const { id } = req.params;
-
   try {
-    const result = await db()
+    const shoppingList = await db()
       .select()
       .from('shopping_list as sl')
       .where('sl.id', id);
-
-    if (!result.length) {
-      return res.status(404).send('No such shopping list');
-    }
-    res.send(result);
+    const result = await getShoppingListsRecipesWithIngredients(
+      [id],
+      shoppingList
+    );
+    res.send(result[0]);
   } catch (error) {
     console.error(error);
     res.status(500).send(error);
