@@ -1,8 +1,19 @@
 import { sumBy } from 'lodash';
-import { deriveCost, formatAsFloat2DecimalPlaces } from '../controllers/recipes';
-import { DbShoppingListRecipe } from '../types/data';
+import {
+  deriveCost,
+  formatAsFloat2DecimalPlaces,
+} from '../controllers/recipes';
+import {
+  DbShoppingListIngredient,
+  DbShoppingListRecipe,
+  ShoppingListIngredient,
+} from '../types/data';
 import { getRecipeIngredients } from './recipes';
-import type { DbShoppingList, ShoppingList, ShoppingListWithRecipes } from '../types/data';
+import type {
+  DbShoppingList,
+  ShoppingList,
+  ShoppingListWithRecipes,
+} from '../types/data';
 const db = require('../utils/database');
 
 export const getShoppingListRecipes = async (
@@ -18,11 +29,13 @@ export const getShoppingListRecipes = async (
     )
     .leftJoin('recipe as r', 'r.id', 'slr.recipe_id')
     .whereIn('slr.shopping_list_id', shoppingListIds);
-}
+};
 
-export const getShoppingListsRecipesWithIngredients = async (shoppingListIds: number[], shoppingLists: DbShoppingList[]) => {
+export const getShoppingListsRecipesWithIngredients = async (
+  shoppingListIds: number[],
+  shoppingLists: DbShoppingList[]
+) => {
   const queriedRecipes = await getShoppingListRecipes(shoppingListIds);
-  console.log('QUERIED RECIPES', queriedRecipes);
 
   const shoppingListsWithRecipes = shoppingLists.map(
     (shoppingList: ShoppingList) => {
@@ -30,11 +43,23 @@ export const getShoppingListsRecipesWithIngredients = async (shoppingListIds: nu
       let totalServings = 0;
       const shoppingListRecipes = queriedRecipes
         .filter((recipe) => recipe.shopping_list_id === shoppingList.id)
-        .map(({ recipe_id, recipe_name, shopping_list_servings, recipe_servings }) => {
-          recipeIds.push(recipe_id);
-          totalServings += shopping_list_servings;
-          return { id: recipe_id, name: recipe_name, servings: shopping_list_servings, recipeServings: recipe_servings };
-        });      
+        .map(
+          ({
+            recipe_id,
+            recipe_name,
+            shopping_list_servings,
+            recipe_servings,
+          }) => {
+            recipeIds.push(recipe_id);
+            totalServings += shopping_list_servings;
+            return {
+              id: recipe_id,
+              name: recipe_name,
+              servings: shopping_list_servings,
+              recipeServings: recipe_servings,
+            };
+          }
+        );
 
       // building the shopping lists with recipes object
       return {
@@ -48,25 +73,27 @@ export const getShoppingListsRecipesWithIngredients = async (shoppingListIds: nu
   );
 
   const allRecipeIds: Set<number> = new Set(
-    shoppingListsWithRecipes
-      .flatMap(
-        shoppingListWithRecipes => shoppingListWithRecipes.recipeIds
-      )
+    shoppingListsWithRecipes.flatMap(
+      (shoppingListWithRecipes) => shoppingListWithRecipes.recipeIds
+    )
   );
 
   const allIngredients = await getRecipeIngredients(Array.from(allRecipeIds));
 
   const shoppingListsWithRecipesAndIngredients = shoppingListsWithRecipes.map(
-    shoppingListWithRecipes => {
+    (shoppingListWithRecipes) => {
       const shoppingListingredients = allIngredients
         .filter((ingredient) =>
           shoppingListWithRecipes.recipeIds.includes(ingredient.recipe_id)
         )
         .map((ingredientResponse) => {
-          const ingredientRecipe = shoppingListWithRecipes.recipes.find(recipe => recipe.id === ingredientResponse.recipe_id)
-          let ingredientMultiplier = 1
+          const ingredientRecipe = shoppingListWithRecipes.recipes.find(
+            (recipe) => recipe.id === ingredientResponse.recipe_id
+          );
+          let ingredientMultiplier = 1;
           if (ingredientRecipe)
-            ingredientMultiplier = ingredientRecipe.servings / ingredientRecipe.recipeServings
+            ingredientMultiplier =
+              ingredientRecipe.servings / ingredientRecipe.recipeServings;
 
           const {
             ingredient_id,
@@ -76,7 +103,8 @@ export const getShoppingListsRecipesWithIngredients = async (shoppingListIds: nu
             recipe_measurement_unit,
             recipe_id,
           } = ingredientResponse;
-          ingredientResponse.recipe_number_of = recipe_number_of * ingredientMultiplier
+          ingredientResponse.recipe_number_of =
+            recipe_number_of * ingredientMultiplier;
 
           const derivedCost = deriveCost(ingredientResponse);
 
@@ -91,8 +119,10 @@ export const getShoppingListsRecipesWithIngredients = async (shoppingListIds: nu
           };
         });
 
-      // TODO  need to get the shoppinglistIngredients collapsed/compressed here
-      const shoppingListCost = formatAsFloat2DecimalPlaces(sumBy(shoppingListingredients, 'derivedCost'));
+      const shoppingListCost = formatAsFloat2DecimalPlaces(
+        sumBy(shoppingListingredients, 'derivedCost')
+      );
+
       const shoppingListWithRecipesAndIngredients = {
         id: shoppingListWithRecipes.id,
         name: shoppingListWithRecipes.name,
@@ -106,4 +136,4 @@ export const getShoppingListsRecipesWithIngredients = async (shoppingListIds: nu
   );
 
   return shoppingListsWithRecipesAndIngredients;
-}
+};

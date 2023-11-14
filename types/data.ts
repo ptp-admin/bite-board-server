@@ -89,8 +89,8 @@ export interface DbShoppingListIngredient {
 export interface ShoppingListIngredient {
   id: number;
   name: string;
-  category: string;
-  derivedCost: number;
+  category?: string;
+  derivedCost?: number;
   numberOf: number;
   unit: string;
   recipeIds: number[];

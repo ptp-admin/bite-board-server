@@ -7,7 +7,10 @@ import type {
   ShoppingListWithRecipes,
 } from '../types/data';
 import { getRecipeIngredients } from '../utils/recipes';
-import { getShoppingListRecipes, getShoppingListsRecipesWithIngredients } from '../utils/shoppingLists';
+import {
+  getShoppingListRecipes,
+  getShoppingListsRecipesWithIngredients,
+} from '../utils/shoppingLists';
 import { deriveCost, formatAsFloat2DecimalPlaces } from './recipes';
 import { sumBy } from 'lodash';
 
@@ -68,7 +71,7 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
 });
 
 shoppingListsRouter.post('/:id/add-recipe/', async (req: any, res: any) => {
-  const shoppingListId = req.params.id
+  const shoppingListId = req.params.id;
   const { recipeId, servings } = req.body;
 
   const result = await db('shopping_list_recipe')
@@ -76,7 +79,8 @@ shoppingListsRouter.post('/:id/add-recipe/', async (req: any, res: any) => {
       shopping_list_id: shoppingListId,
       recipe_id: recipeId,
       servings: servings,
-    }).catch((error: any) => {
+    })
+    .catch((error: any) => {
       console.error(error);
       res.status(500).send(error);
     });
@@ -98,7 +102,9 @@ shoppingListsRouter.get('/', async (req: any, res: any) => {
     (shoppingList: ShoppingList) => shoppingList.id
   );
 
-  res.send(await getShoppingListsRecipesWithIngredients(shoppingListIds, shoppingLists));
+  res.send(
+    await getShoppingListsRecipesWithIngredients(shoppingListIds, shoppingLists)
+  );
 });
 
 shoppingListsRouter.get('/:id', async (req: any, res: any) => {
@@ -109,7 +115,10 @@ shoppingListsRouter.get('/:id', async (req: any, res: any) => {
       .select()
       .from('shopping_list as sl')
       .where('sl.id', id);
-    const result = await getShoppingListsRecipesWithIngredients([id], shoppingList)
+    const result = await getShoppingListsRecipesWithIngredients(
+      [id],
+      shoppingList
+    );
     res.send(result[0]);
   } catch (error) {
     console.error(error);
@@ -122,4 +131,4 @@ shoppingListsRouter.delete('/:id', async (req: any, res: any) => {
 });
 
 module.exports = shoppingListsRouter;
-export { };
+export {};
