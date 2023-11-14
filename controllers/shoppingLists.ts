@@ -71,22 +71,23 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
 });
 
 shoppingListsRouter.post('/:id/add-recipe/', async (req: any, res: any) => {
-  const shoppingListId = req.params.id;
+  console.log('/shopping-lists/:id/add-recipe/ POST request received');
+  const shoppingListId = req.params.id
   const { recipeId, servings } = req.body;
 
-  const result = await db('shopping_list_recipe')
-    .insert({
+  try {
+    const result = await db('shopping_list_recipe').insert({
       shopping_list_id: shoppingListId,
       recipe_id: recipeId,
       servings: servings,
-    })
-    .catch((error: any) => {
-      console.error(error);
-      res.status(500).send(error);
     });
-  const successMessage = `Successfully added recipe/${recipeId}/ to shopping-list/${shoppingListId}/`;
-  console.log(successMessage);
-  res.send(successMessage);
+    const successMessage = `Successfully added recipe/${recipeId}/ to shopping-list/${shoppingListId}/`;
+    console.log(successMessage);
+    res.send(successMessage);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'An error occurred while inserting data.' });
+  }
 });
 
 shoppingListsRouter.put('/:id', async (req: any, res: any) => {
