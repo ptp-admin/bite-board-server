@@ -35,8 +35,8 @@ const addShoppingListRecipe = async (
 shoppingListsRouter.post('/', async (req: any, res: any) => {
   console.log('/shopping-lists/ POST request received');
 
-  const { name, shoppingListRecipeIdsAndServings } = req.body;
-  console.log(name, shoppingListRecipeIdsAndServings);
+  const { name, recipeServings } = req.body;
+  console.log(name, recipeServings);
 
   try {
     await db.transaction(async (trx: any) => {
@@ -46,8 +46,8 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
         .into('shopping_list')
         .transacting(trx);
 
-      if (shoppingListRecipeIdsAndServings) {
-        const recipePromises = shoppingListRecipeIdsAndServings.map(
+      if (recipeServings) {
+        const recipePromises = recipeServings.map(
           (recipe: ShoppingListRecipe) =>
             addShoppingListRecipe(
               trx,
