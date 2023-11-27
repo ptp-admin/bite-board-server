@@ -56,6 +56,11 @@ export interface Recipe {
 }
 
 export interface DbShoppingListRecipe {
+  shopping_list_id: number;
+  recipe_id: number;
+  servings: number;
+}
+export interface DbShoppingListRecipes {
   shopping_list_id?: number;
   recipe_id: number;
   recipe_name: string;
