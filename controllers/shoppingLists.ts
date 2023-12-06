@@ -38,7 +38,7 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
         .returning('id')
         .into('shopping_list')
         .transacting(trx);
-
+      
       if (shoppingListRecipes) {
         const recipePromises = shoppingListRecipes.map(
           (recipe: ShoppingListRecipe) =>
