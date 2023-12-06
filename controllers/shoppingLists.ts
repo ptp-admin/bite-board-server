@@ -1,21 +1,14 @@
-import type {
-  DbShoppingList,
-  DbShoppingListRecipe,
-  Recipe,
-  ShoppingList,
-  ShoppingListRecipe,
-  ShoppingListWithRecipes,
-} from '../types/data';
-import { getRecipeIngredients } from '../utils/recipes';
-import {
-  getShoppingListRecipes,
-  getShoppingListsRecipesWithIngredients,
-} from '../utils/shoppingLists';
-import { deriveCost, formatAsFloat2DecimalPlaces } from './recipes';
-import { sumBy } from 'lodash';
+import type { ShoppingList, ShoppingListRecipe } from '../types/data';
+import { getShoppingListsRecipesWithIngredients } from '../utils/shoppingLists';
 
 const shoppingListsRouter = require('express').Router();
 const db = require('../utils/database');
+const _ = require('lodash');
+
+const UPDATE_RESPONSE_CODES = {
+  SUCCESS: 1,
+  FAILURE: 0,
+};
 
 const addShoppingListRecipe = async (
   trx: any,
@@ -35,8 +28,8 @@ const addShoppingListRecipe = async (
 shoppingListsRouter.post('/', async (req: any, res: any) => {
   console.log('/shopping-lists/ POST request received');
 
-  const { name, recipeServings } = req.body;
-  console.log(name, recipeServings);
+  const { name, shoppingListRecipes } = req.body;
+  console.log(name, shoppingListRecipes);
 
   try {
     await db.transaction(async (trx: any) => {
@@ -45,9 +38,9 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
         .returning('id')
         .into('shopping_list')
         .transacting(trx);
-
-      if (recipeServings) {
-        const recipePromises = recipeServings.map(
+      
+      if (shoppingListRecipes) {
+        const recipePromises = shoppingListRecipes.map(
           (recipe: ShoppingListRecipe) =>
             addShoppingListRecipe(
               trx,
@@ -110,8 +103,32 @@ shoppingListsRouter.delete('/:shoppingListId/recipes/:recipeId', async (req: any
   }
 });
 
-shoppingListsRouter.put('/:id', async (req: any, res: any) => {
-  // updating a shopping list here
+shoppingListsRouter.put('/:id/', async (req: any, res: any) => {
+  const { id } = req.params;
+  console.log(`/shopping-lists/${id} put request received`);
+
+  // update the name
+  if (req.body.name) {
+    try {
+      const response = await db('shopping_list')
+        .update({ name: req.body.name })
+        .where({
+          id,
+        });
+      if (response === UPDATE_RESPONSE_CODES.FAILURE) {
+        res
+          .status(404)
+          .json({ error: `Could not find the shopping list with id: ${id}` });
+      } else {
+        const successMessage = `Successfully updated name for recipe/${id} \nname: ${req.body.name}`;
+        console.log(successMessage);
+        res.send(successMessage);
+      }
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'An error occurred while updating data.' });
+    }
+  }
 });
 
 shoppingListsRouter.get('/', async (req: any, res: any) => {
