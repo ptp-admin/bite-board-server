@@ -96,10 +96,8 @@ shoppingListsRouter.post('/:id/add-recipe/', async (req: any, res: any) => {
   }
 });
 
-shoppingListsRouter.put('/:id', async (req: any, res: any) => {
-  // updating a shopping list here
+shoppingListsRouter.put('/:id/', async (req: any, res: any) => {
   const { id } = req.params;
-
   console.log(`/shopping-lists/${id} put request received`);
 
   // update the name
@@ -115,97 +113,15 @@ shoppingListsRouter.put('/:id', async (req: any, res: any) => {
           .status(404)
           .json({ error: `Could not find the shopping list with id: ${id}` });
       } else {
-        const successMessage = `Successfully updated name for recipe/${id}`;
+        const successMessage = `Successfully updated name for recipe/${id} \nname: ${req.body.name}`;
         console.log(successMessage);
+        res.send(successMessage);
       }
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: 'An error occurred while updating data.' });
     }
   }
-
-  // PUT IN A TRXN
-
-  // recipes from DB
-  const dbExistingRecipes = await db
-    .select()
-    .from('shopping_list_recipe')
-    .where('shopping_list_id', id);
-
-  // recipes from payload
-  const { recipes } = req.body;
-
-  // Group existing by recipes id for faster lookup
-  const payloadRecipesById = _.groupBy(recipes, 'id');
-  const dbExistingRecipesById = _.groupBy(dbExistingRecipes, 'recipe_id');
-
-  const recipesToAdd: Recipe[] = recipes.filter(
-    (recipe: Recipe) => !dbExistingRecipesById[`${recipe.id}`]
-  );
-
-  const recipesToDelete: DbShoppingListRecipe[] = dbExistingRecipes.filter(
-    (recipe: DbShoppingListRecipe) => !payloadRecipesById[`${recipe.recipe_id}`]
-  );
-
-  // TODO work out why transactions aren't working
-  await db.transaction(async (trx: any) => {
-    // add recipes that are missing from the db
-    try {
-      recipesToAdd.forEach(async (recipe) => {
-        await db('shopping_list_recipe').insert({
-          shopping_list_id: id,
-          recipe_id: recipe.id,
-          servings: recipe.servings,
-        });
-        console.log(
-          `Successfully added recipe/${recipe.id}/ to shopping-list/${id}/`
-        );
-      });
-      console.log(`Successfully added recipes to shopping-list/${id}`);
-    } catch (error) {
-      console.error(error);
-      res
-        .status(500)
-        .json({ error: 'An error occurred while inserting data.' });
-    }
-
-    // delete recipes that are missing from the payload
-    try {
-      recipesToDelete.forEach(async (recipe) => {
-        await db('shopping_list_recipe')
-          .where({
-            shopping_list_id: id,
-            recipe_id: recipe.recipe_id,
-          })
-          .del();
-        console.log(
-          `Successfully deleted recipe/${recipe.recipe_id}/ from shopping-list/${id}/`
-        );
-      });
-      console.log(`Successfully deleted recipes to shopping-list/${id}`);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'An error occurred while deleting data.' });
-    }
-
-    // update servings for all recipes in payload
-    try {
-      recipes.forEach(async (recipe: Recipe) => {
-        await db('shopping_list_recipe')
-          .update('servings', recipe.servings)
-          .where({
-            shopping_list_id: id,
-            recipe_id: recipe.id,
-          });
-      });
-      const successMessage = `Successfully updated recipe servings for shopping-list/${id}`;
-      console.log(successMessage);
-      res.send(`Successfully updated shopping-list/${id}`);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'An error occurred while updating data.' });
-    }
-  });
 });
 
 shoppingListsRouter.get('/', async (req: any, res: any) => {
