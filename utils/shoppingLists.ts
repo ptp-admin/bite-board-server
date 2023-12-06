@@ -5,7 +5,7 @@ import {
 } from '../controllers/recipes';
 import {
   DbShoppingListIngredient,
-  DbShoppingListRecipe,
+  DbShoppingListRecipes,
   ShoppingListIngredient,
 } from '../types/data';
 import { getRecipeIngredients } from './recipes';
@@ -18,7 +18,7 @@ const db = require('../utils/database');
 
 export const getShoppingListRecipes = async (
   shoppingListIds: Array<number>
-): Promise<DbShoppingListRecipe[]> => {
+): Promise<DbShoppingListRecipes[]> => {
   return await db('shopping_list_recipe as slr')
     .select(
       'slr.shopping_list_id',
