@@ -1,18 +1,5 @@
-import type {
-  DbShoppingList,
-  DbShoppingListRecipe,
-  Recipe,
-  ShoppingList,
-  ShoppingListRecipe,
-  ShoppingListWithRecipes,
-} from '../types/data';
-import { getRecipeIngredients } from '../utils/recipes';
-import {
-  getShoppingListRecipes,
-  getShoppingListsRecipesWithIngredients,
-} from '../utils/shoppingLists';
-import { deriveCost, formatAsFloat2DecimalPlaces } from './recipes';
-import { sumBy } from 'lodash';
+import type { ShoppingList, ShoppingListRecipe } from '../types/data';
+import { getShoppingListsRecipesWithIngredients } from '../utils/shoppingLists';
 
 const shoppingListsRouter = require('express').Router();
 const db = require('../utils/database');
@@ -41,8 +28,8 @@ const addShoppingListRecipe = async (
 shoppingListsRouter.post('/', async (req: any, res: any) => {
   console.log('/shopping-lists/ POST request received');
 
-  const { name, recipeServings } = req.body;
-  console.log(name, recipeServings);
+  const { name, shoppingListRecipes } = req.body;
+  console.log(name, shoppingListRecipes);
 
   try {
     await db.transaction(async (trx: any) => {
@@ -52,8 +39,8 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
         .into('shopping_list')
         .transacting(trx);
 
-      if (recipeServings) {
-        const recipePromises = recipeServings.map(
+      if (shoppingListRecipes) {
+        const recipePromises = shoppingListRecipes.map(
           (recipe: ShoppingListRecipe) =>
             addShoppingListRecipe(
               trx,
