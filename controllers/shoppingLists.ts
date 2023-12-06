@@ -63,8 +63,8 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
   }
 });
 
-shoppingListsRouter.post('/:id/add-recipe/', async (req: any, res: any) => {
-  console.log('/shopping-lists/:id/add-recipe/ POST request received');
+shoppingListsRouter.post('/:id/recipes/', async (req: any, res: any) => {
+  console.log('/shopping-lists/:id/recipes/ POST request received');
   const shoppingListId = req.params.id;
   const { recipeId, servings } = req.body;
 
@@ -80,6 +80,26 @@ shoppingListsRouter.post('/:id/add-recipe/', async (req: any, res: any) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'An error occurred while inserting data.' });
+  }
+});
+
+shoppingListsRouter.delete('/:shoppingListId/recipes/:recipeId', async (req: any, res: any) => {
+  const { shoppingListId, recipeId } = req.params;
+  console.log(`/shopping-lists/${shoppingListId}/recipes/${recipeId} DELETE request recieved`);
+  try {
+    await db('shopping_list_recipe')
+      .where({
+        shopping_list_id: shoppingListId,
+        recipe_id: recipeId,
+      })
+      .del();
+    console.log(
+      `Successfully deleted recipe/${recipeId}/ from shopping-list/${shoppingListId}/`
+    );
+    res.send(200);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'An error occurred while deleting data.' });
   }
 });
 
@@ -182,4 +202,4 @@ shoppingListsRouter.delete('/:id', async (req: any, res: any) => {
 });
 
 module.exports = shoppingListsRouter;
-export {};
+export { };
