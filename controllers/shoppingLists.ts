@@ -29,7 +29,6 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
   console.log('/shopping-lists/ POST request received');
 
   const { name, shoppingListRecipes } = req.body;
-  console.log(name, shoppingListRecipes);
 
   try {
     await db.transaction(async (trx: any) => {
@@ -38,7 +37,6 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
         .returning('id')
         .into('shopping_list')
         .transacting(trx);
-
       if (shoppingListRecipes) {
         const recipePromises = shoppingListRecipes.map(
           (recipe: ShoppingListRecipe) =>
@@ -52,11 +50,10 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
 
         await Promise.all(recipePromises);
       }
+      const successMessage = `Successfully added ${name} and all recipes to the database`;
+      console.log(successMessage);
+      res.send({shoppingListId, successMessage});
     });
-
-    const successMessage = `Successfully added ${name} and all recipes to the database`;
-    console.log(successMessage);
-    res.send(successMessage);
   } catch (error) {
     console.error(error);
     res.status(500).send(error);
