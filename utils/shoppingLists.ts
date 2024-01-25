@@ -2,7 +2,7 @@ import { sumBy } from 'lodash';
 import {
   deriveCost,
   formatAsFloat2DecimalPlaces,
-} from '../controllers/recipes';
+} from './cost';
 import {
   DbShoppingListIngredient,
   DbShoppingListRecipes,
