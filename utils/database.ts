@@ -1,8 +1,7 @@
-const { createClient } = require('@supabase/supabase-js');
+import { Database } from "../types/database";
+import { createClient } from '@supabase/supabase-js'
 
-// Create a single supabase client for interacting with your database
-export const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+export const supabase = createClient<Database>(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_ANON_KEY || ''
 );
-
