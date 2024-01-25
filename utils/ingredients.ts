@@ -3,7 +3,7 @@ import { Ingredient } from "../types/types";
 import { supabase } from "./database";
 
 export const getIngredients = async (): Promise<Ingredient[] | PostgrestError> => {
-  const { data, error } = await supabase.from('ingredients').select('*');
+  const { data, error } = await supabase.from('ingredient').select('*');
   
   if (data) return data;
 
@@ -13,9 +13,9 @@ export const getIngredients = async (): Promise<Ingredient[] | PostgrestError> =
 
 export const getIngredientById = async (id: string): Promise<Ingredient | PostgrestError> => {
   const { data, error } = await supabase
-    .from('ingredients')
+    .from('ingredient')
     .select('*')
-    .eq('id', id);
+    .eq('id', id)
 
   if (data) return data[0];
 
