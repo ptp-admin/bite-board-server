@@ -1,8 +1,8 @@
 import { PostgrestError } from "@supabase/supabase-js";
-import { DbIngredient } from "../types/types";
+import { Ingredient } from "../types/types";
 import { supabase } from "./database";
 
-export const getIngredients = async (): Promise<DbIngredient[] | PostgrestError> => {
+export const getIngredients = async (): Promise<Ingredient[] | PostgrestError> => {
   const { data, error } = await supabase.from('ingredients').select('*');
   
   if (data) return data;
@@ -11,7 +11,7 @@ export const getIngredients = async (): Promise<DbIngredient[] | PostgrestError>
   return error;
 };
 
-export const getIngredientById = async (id: string): Promise<DbIngredient | PostgrestError> => {
+export const getIngredientById = async (id: string): Promise<Ingredient | PostgrestError> => {
   const { data, error } = await supabase
     .from('ingredients')
     .select('*')

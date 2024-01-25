@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { DbIngredient } from '../types/types';
+import { Ingredient } from '../types/types';
 import { getIngredientById, getIngredients } from '../utils/ingredients';
 const ingredientsRouter = require('express').Router();
 const db = require('../utils/database'); // Using 'knex' package for database calls
@@ -66,7 +66,7 @@ ingredientsRouter.get('/:id', async (req: any, res: any) => {
 
 ingredientsRouter.post('/', (req: any, res: any) => {
   console.log('/ingredients/ POST request recieved');
-  const ingredient: DbIngredient = {
+  const ingredient: Ingredient = {
     id: randomUUID(),
     name: req.body.name,
     category: req.body.category,
@@ -87,7 +87,7 @@ ingredientsRouter.post('/', (req: any, res: any) => {
 
 ingredientsRouter.put('/:id', (req: any, res: any) => {
   console.log('/ingredients/ PUT request recieved');
-  const ingredient: DbIngredient = {
+  const ingredient: Ingredient = {
     id: req.params.id,
     name: req.body.name,
     category: req.body.category,
