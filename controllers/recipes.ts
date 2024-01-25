@@ -275,14 +275,14 @@ recipesRouter.post('/', async (req: any, res: any) => {
 });
 
 recipesRouter.put('/:id', async (req: any, res: any) => {
-  const { id } = req.params;
-  console.log(`/recipes/${id} put request received`);
+  const recipeId = req.params.id;
+  console.log(`/recipes/${recipeId} put request received`);
   try {
     // Find DB record of the recipe with specified ID
     const dbExistingRecipe = await db
       .select()
       .from('recipe')
-      .where('id', id)
+      .where('id', recipeId)
       .first();
 
     if (!dbExistingRecipe) {
@@ -295,7 +295,7 @@ recipesRouter.put('/:id', async (req: any, res: any) => {
     const dbExistingIngredients = await db
       .select()
       .from('recipe_ingredient')
-      .where('recipe_id', id);
+      .where('recipe_id', recipeId);
 
     // Destructure recipe ingredients from request
     const { recipeIngredients, ...recipe } = req.body;
@@ -304,7 +304,7 @@ recipesRouter.put('/:id', async (req: any, res: any) => {
       recipeIngredients,
       (i: Ingredient) => i.id
     );
-
+ 
     // Group existing by ingredient id for faster lookup
     const existingIngredientsById = _.groupBy(existingIngredients, 'id');
     const dbExistingIngredientsById = _.groupBy(
@@ -317,8 +317,8 @@ recipesRouter.put('/:id', async (req: any, res: any) => {
     );
 
     await db.transaction(async (trx: any) => {
-      // Update recipe name and servings
-      await db('recipe').update(recipe).where('id', id).transacting(trx);
+    // Update recipe name and servings
+    await db('recipe').update(recipe).where('id', recipeId).transacting(trx);
 
       // Add new (non-existing in ingredients table) ingredients
       for (const newIngredient of newIngredients) {
@@ -331,7 +331,7 @@ recipesRouter.put('/:id', async (req: any, res: any) => {
 
         const dbNewIngredient: DbRecipeIngredient = {
           ingredient_id,
-          recipe_id: id,
+          recipe_id: recipeId,
           number_of: newIngredient.recipeNumberOf || 0,
           measurement_unit: newIngredient.recipeMeasurementUnit,
         };
@@ -346,7 +346,7 @@ recipesRouter.put('/:id', async (req: any, res: any) => {
         if (newRecipeIngredient.id) {
           const dbNewIngredient: DbRecipeIngredient = {
             ingredient_id: newRecipeIngredient.id,
-            recipe_id: id,
+            recipe_id: recipeId,
             number_of: newRecipeIngredient.recipeNumberOf || 0,
             measurement_unit: newRecipeIngredient.recipeMeasurementUnit,
           };
@@ -369,7 +369,7 @@ recipesRouter.put('/:id', async (req: any, res: any) => {
           await db('recipe_ingredient')
             .where({
               ingredient_id: ingredient_id,
-              recipe_id: id,
+              recipe_id: recipeId,
             })
             .del()
             .transacting(trx);
@@ -392,7 +392,7 @@ recipesRouter.put('/:id', async (req: any, res: any) => {
               .update(updatedFields)
               .where({
                 ingredient_id: ingredient_id,
-                recipe_id: id,
+                recipe_id: recipeId,
               })
               .transacting(trx);
           }
@@ -401,7 +401,7 @@ recipesRouter.put('/:id', async (req: any, res: any) => {
 
       const successMessage = `Successfully updated ${name} and all ingredients to the database`;
       console.log(successMessage);
-      res.send({ message: successMessage, id });
+      res.send({ message: successMessage, id: recipeId });
     });
   } catch (error) {
     console.error(error);
