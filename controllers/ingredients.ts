@@ -126,5 +126,4 @@ ingredientsRouter.delete('/:id', (req: any, res: any) => {
     });
 });
 
-module.exports = ingredientsRouter;
-export {};
+export { ingredientsRouter };

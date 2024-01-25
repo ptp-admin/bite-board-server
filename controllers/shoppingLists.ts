@@ -52,7 +52,7 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
       }
       const successMessage = `Successfully added ${name} and all recipes to the database`;
       console.log(successMessage);
-      res.send({shoppingListId, successMessage});
+      res.send({ shoppingListId, successMessage });
     });
   } catch (error) {
     console.error(error);
@@ -226,5 +226,4 @@ shoppingListsRouter.delete('/:id', async (req: any, res: any) => {
   }
 });
 
-module.exports = shoppingListsRouter;
-export {};
+export { shoppingListsRouter };
