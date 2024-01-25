@@ -35,11 +35,6 @@ const addRecipeIngredient = async (
   }
 };
 
-recipesRouter.get('/mock', (req: any, res: any) => {
-  console.log('/recipes/mock GET request received');
-  res.send(recipeMocks);
-});
-
 recipesRouter.get('/', async (req: any, res: any) => {
   try {
     console.log('/recipes/ GET request received');
