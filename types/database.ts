@@ -231,6 +231,7 @@ export interface Database {
           name: string | null
           recipeId: string | null
           recipeServings: number | null
+          scaleMultiplier: number | null
           servings: number | null
           shoppingListId: string | null
         }

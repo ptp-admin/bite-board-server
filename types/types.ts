@@ -39,28 +39,20 @@ export interface RecipeIngredientDto extends IngredientDto {
 export interface ShoppingListDto {
   id: string;
   name: string;
-  servings: number;
+  servings: number | null;
   cost: number;
   recipes: ShoppingListRecipeDto[];
-  ingredients: {
-    id: number;
-    name: string;
-    category: string | undefined;
-    derivedCost: number | undefined;
-    numberOf: number;
-    measurementUnit: string;
-    recipeId: number;
-  }[];
+  ingredients: ShoppingListRecipeIngredientDto[];
 }
 export interface ShoppingListRecipeDto {
-  id: number;
+  id: string;
   name: string;
   servings: number;
   recipeServings: number;
 }
 export interface ShoppingListRecipeIngredientDto extends Omit<IngredientDto, "costPer"> {
-  derivedCost: number | undefined;
-  recipeId: number;
+  derivedCost: number | null;
+  recipeId: string;
 }
 
 // utility types
