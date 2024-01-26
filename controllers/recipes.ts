@@ -3,12 +3,20 @@ import type {
   DbRecipeIngredientDetailed,
   DbIngredient,
   Ingredient,
-  Recipe,
   RecipeIngredient,
+  Recipe,
 } from '../types/data';
 import { RecipeCostPerServe } from '../types/types';
-import { costPerServe, deriveCost } from '../utils/cost';
-import { getRecipeIngredients } from '../utils/recipes';
+import { costPerServeOld, deriveCostOld } from '../utils/cost';
+import {
+  getRecipeIngredients,
+  getRecipesWithIngredients,
+} from '../utils/recipes';
+
+export interface RecipeCostPerServeOld {
+  costPerServe?: number;
+  costAccuracy?: number;
+}
 
 const recipesRouter = require('express').Router();
 const db = require('../utils/database');
@@ -36,58 +44,14 @@ const addRecipeIngredient = async (
 };
 
 recipesRouter.get('/', async (req: any, res: any) => {
-  try {
-    console.log('/recipes/ GET request received');
-    const recipes = await db.select().from('recipe');
-    const recipeIds = recipes.map((recipe: Recipe) => recipe.id);
-    const queriedIngredients = await getRecipeIngredients(recipeIds);
+  console.log('/recipes/ GET request received');
 
-    const result: Recipe[] = recipes.map((recipe: Recipe) => {
-      const recipeIngredients: RecipeIngredient[] = queriedIngredients
-        .filter((ingredient) => ingredient.recipe_id === recipe.id)
-        .map((ingredient: DbRecipeIngredientDetailed) => {
-          const {
-            number_of,
-            cost_per,
-            measurement_unit,
-            recipe_number_of,
-            recipe_measurement_unit,
-            recipe_id,
-            ...rest
-          } = ingredient;
-
-          const derivedCost = deriveCost(ingredient);
-
-          const recipeIngredient: RecipeIngredient = {
-            ...rest,
-            costPer: cost_per,
-            numberOf: number_of,
-            measurementUnit: measurement_unit,
-            recipeNumberOf: recipe_number_of,
-            recipeMeasurementUnit: recipe_measurement_unit,
-            derivedCost,
-          };
-
-          return recipeIngredient;
-        });
-
-      const recipeCostPerServe = costPerServe(
-        recipe.servings || 1,
-        recipeIngredients
-      );
-
-      return {
-        ...recipe,
-        recipeIngredients,
-        ...recipeCostPerServe,
-      };
-    });
-
-    res.send(result);
-  } catch (error) {
+  const data = await getRecipesWithIngredients().catch((error) => {
     console.error(error);
     res.status(500).send(error);
-  }
+  });
+
+  res.send(data);
 });
 
 recipesRouter.get('/:id', async (req: any, res: any) => {
@@ -112,7 +76,7 @@ recipesRouter.get('/:id', async (req: any, res: any) => {
           ...rest
         } = ingredient;
 
-        const derivedCost = deriveCost(ingredient);
+        const derivedCost = deriveCostOld(ingredient);
 
         const recipeIngredient: RecipeIngredient = {
           ...rest,
@@ -127,7 +91,7 @@ recipesRouter.get('/:id', async (req: any, res: any) => {
         return recipeIngredient;
       });
 
-    const recipeCostPerServe: RecipeCostPerServe = costPerServe(
+    const recipeCostPerServe: RecipeCostPerServeOld = costPerServeOld(
       recipe.servings || 1,
       recipeIngredients
     );

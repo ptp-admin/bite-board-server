@@ -1,14 +1,13 @@
 import { PostgrestError } from "@supabase/supabase-js";
 import { Ingredient } from "../types/types";
 import { supabase } from "./database";
+import { logAndReturn } from "./error";
 
 export const getIngredients = async (): Promise<Ingredient[] | PostgrestError> => {
   const { data, error } = await supabase.from('ingredient').select('*');
-  
-  if (data) return data;
+  if (error) return logAndReturn(error);
 
-  console.error(error);
-  return error;
+  return data;
 };
 
 export const getIngredientById = async (id: string): Promise<Ingredient | PostgrestError> => {
@@ -16,9 +15,7 @@ export const getIngredientById = async (id: string): Promise<Ingredient | Postgr
     .from('ingredient')
     .select('*')
     .eq('id', id)
+  if (error) return logAndReturn(error);
 
-  if (data) return data[0];
-
-  console.error(error);
-  return error;
+  return data[0];
 }

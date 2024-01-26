@@ -1,6 +1,7 @@
 import { sumBy } from 'lodash';
 import {
   deriveCost,
+  deriveCostOld,
   formatAsFloat2DecimalPlaces,
 } from './cost';
 import {
@@ -106,7 +107,7 @@ export const getShoppingListsRecipesWithIngredients = async (
           ingredientResponse.recipe_number_of =
             recipe_number_of * ingredientMultiplier;
 
-          const derivedCost = deriveCost(ingredientResponse);
+          const derivedCost = deriveCostOld(ingredientResponse);
 
           return {
             id: ingredient_id,
