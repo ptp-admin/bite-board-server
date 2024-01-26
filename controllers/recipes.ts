@@ -1,15 +1,11 @@
 import type {
   DbRecipeIngredient,
-  DbRecipeIngredientDetailed,
   DbIngredient,
   Ingredient,
   RecipeIngredient,
-  Recipe,
 } from '../types/data';
-import { RecipeCostPerServe } from '../types/types';
-import { costPerServeOld, deriveCostOld } from '../utils/cost';
 import {
-  getRecipeIngredients,
+  getRecipeWithIngredientsById,
   getRecipesWithIngredients,
 } from '../utils/recipes';
 
@@ -20,7 +16,6 @@ export interface RecipeCostPerServeOld {
 
 const recipesRouter = require('express').Router();
 const db = require('../utils/database');
-const recipeMocks = require('../mockData/recipes');
 const _ = require('lodash');
 
 const addRecipeIngredient = async (
@@ -56,57 +51,13 @@ recipesRouter.get('/', async (req: any, res: any) => {
 
 recipesRouter.get('/:id', async (req: any, res: any) => {
   const { id } = req.params;
-  try {
-    console.log(`/recipes/${id} GET request received`);
-    const returnedRecipe = await db.select().from('recipe').where('id', id);
-    const recipe: Recipe = returnedRecipe[0];
-    const recipeId = recipe.id;
-    const queriedIngredients = await getRecipeIngredients([recipeId]);
-
-    const recipeIngredients: RecipeIngredient[] = queriedIngredients
-      .filter((ingredient) => ingredient.recipe_id === recipe.id)
-      .map((ingredient: DbRecipeIngredientDetailed) => {
-        const {
-          number_of,
-          cost_per,
-          measurement_unit,
-          recipe_number_of,
-          recipe_measurement_unit,
-          recipe_id,
-          ...rest
-        } = ingredient;
-
-        const derivedCost = deriveCostOld(ingredient);
-
-        const recipeIngredient: RecipeIngredient = {
-          ...rest,
-          costPer: cost_per,
-          numberOf: number_of,
-          measurementUnit: measurement_unit,
-          recipeNumberOf: recipe_number_of,
-          recipeMeasurementUnit: recipe_measurement_unit,
-          derivedCost,
-        };
-
-        return recipeIngredient;
-      });
-
-    const recipeCostPerServe: RecipeCostPerServeOld = costPerServeOld(
-      recipe.servings || 1,
-      recipeIngredients
-    );
-
-    const result: Recipe = {
-      ...recipe,
-      recipeIngredients,
-      ...recipeCostPerServe,
-    };
-
-    res.send(result);
-  } catch (error) {
+  console.log(`/recipes/${id} GET request received`);
+  const recipe = await getRecipeWithIngredientsById(id).catch((error) => {
     console.error(error);
     res.status(500).send(error);
-  }
+  });
+
+  res.send(recipe)
 });
 
 recipesRouter.post('/', async (req: any, res: any) => {

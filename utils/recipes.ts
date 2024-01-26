@@ -1,5 +1,5 @@
 import { PostgrestError } from '@supabase/supabase-js';
-import { DbRecipeIngredientDetailed, RecipeIngredient } from '../types/data';
+import { DbRecipeIngredientDetailed } from '../types/data';
 import { Recipe, RecipeDto, RecipeIngredientDto } from '../types/types';
 import { costPerServe, deriveCost } from './cost';
 import { supabase } from './database';
@@ -16,42 +16,56 @@ export const getRecipesWithIngredients = async (): Promise<
 
   const recipesWithIngredients = await Promise.all(
     recipes.map(async (recipe: Recipe): Promise<RecipeDto> => {
-      const { id, ...rest } = recipe;
-      const { data: recipeIngredientsJoined, error } = await supabase
-        .from('recipe_ingredient_joined')
-        .select('*')
-        .eq('recipeId', id);
-      if (error) return logAndReturn(error);
-
-      const recipeIngredients = recipeIngredientsJoined.map(
-        (ingredient): RecipeIngredientDto => {
-          const { id, name, ...rest } = ingredient;
-          return {
-            id: id ?? '',
-            name: name ?? '',
-            ...rest,
-            derivedCost: deriveCost(ingredient),
-          };
-        }
-      );
-
-      const recipeCostPerServe = costPerServe(
-        recipe.servings || 1,
-        recipeIngredients
-      );
-
-      return {
-        ...recipe,
-        recipeIngredients,
-        ...recipeCostPerServe,
-      };
+      return await getRecipeIngredients(recipe);
     })
   );
 
   return recipesWithIngredients;
 };
 
-export async function getRecipeIngredients(
+export const getRecipeWithIngredientsById = async (id: string): Promise<RecipeDto> => {
+  const {data: recipe, error} = await supabase.from('recipe').select('*').eq('id', id).single();
+  if (error) return logAndReturn(error);
+
+  const recipeWithIngredients = await getRecipeIngredients(recipe);
+  console.log('recipeWithIngredients', recipeWithIngredients);
+  
+  return recipeWithIngredients;
+};
+
+export async function getRecipeIngredients(recipe: Recipe): Promise<RecipeDto> {
+  const { id, ...rest } = recipe;
+  const { data: recipeIngredientsJoined, error } = await supabase
+    .from('recipe_ingredient_joined')
+    .select('*')
+    .eq('recipeId', id);
+  if (error) return logAndReturn(error);
+
+  const recipeIngredients = recipeIngredientsJoined.map(
+    (ingredient): RecipeIngredientDto => {
+      const { id, name, ...rest } = ingredient;
+      return {
+        id: id ?? '',
+        name: name ?? '',
+        ...rest,
+        derivedCost: deriveCost(ingredient),
+      };
+    }
+  );
+
+  const recipeCostPerServe = costPerServe(
+    recipe.servings || 1,
+    recipeIngredients
+  );
+
+  return {
+    ...recipe,
+    recipeIngredients,
+    ...recipeCostPerServe,
+  };
+}
+
+export async function getRecipeIngredientsOld(
   recipeIds: Array<number>
 ): Promise<DbRecipeIngredientDetailed[]> {
   return await db('recipe_ingredient as ri')

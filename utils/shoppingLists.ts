@@ -1,19 +1,15 @@
 import { sumBy } from 'lodash';
 import {
-  deriveCost,
   deriveCostOld,
   formatAsFloat2DecimalPlaces,
 } from './cost';
 import {
-  DbShoppingListIngredient,
   DbShoppingListRecipes,
-  ShoppingListIngredient,
 } from '../types/data';
-import { getRecipeIngredients } from './recipes';
+import { getRecipeIngredientsOld } from './recipes';
 import type {
   DbShoppingList,
   ShoppingList,
-  ShoppingListWithRecipes,
 } from '../types/data';
 const db = require('../utils/database');
 
@@ -79,7 +75,7 @@ export const getShoppingListsRecipesWithIngredients = async (
     )
   );
 
-  const allIngredients = await getRecipeIngredients(Array.from(allRecipeIds));
+  const allIngredients = await getRecipeIngredientsOld(Array.from(allRecipeIds));
 
   const shoppingListsWithRecipesAndIngredients = shoppingListsWithRecipes.map(
     (shoppingListWithRecipes) => {
