@@ -109,6 +109,12 @@ export interface Database {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "recipe_ingredient_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            referencedRelation: "recipe_ingredient_joined"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "recipe_ingredient_recipe_id_fkey"
             columns: ["recipe_id"]
             referencedRelation: "recipe"
@@ -167,7 +173,27 @@ export interface Database {
       }
     }
     Views: {
-      [_ in never]: never
+      recipe_ingredient_joined: {
+        Row: {
+          category: string | null
+          costPer: number | null
+          id: string | null
+          measurementUnit: string | null
+          name: string | null
+          numberOf: number | null
+          recipeId: string | null
+          recipeMeasurementUnit: string | null
+          recipeNumberOf: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ingredient_recipe_id_fkey"
+            columns: ["recipeId"]
+            referencedRelation: "recipe"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Functions: {
       [_ in never]: never
