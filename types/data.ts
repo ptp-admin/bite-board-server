@@ -1,5 +1,3 @@
-import { RecipeDto } from "./types";
-
 export interface DbIngredient {
   id?: number;
   name: string;
@@ -45,6 +43,16 @@ export interface DbRecipe {
   name: string;
   method?: string;
   servings?: number;
+}
+
+export interface Recipe {
+  id: number;
+  name: string;
+  method?: string;
+  servings?: number;
+  recipeIngredients?: RecipeIngredient[];
+  costPerServe?: number;
+  costAccuracy?: number;
 }
 
 export interface DbShoppingListRecipe {
@@ -103,7 +111,7 @@ export interface ShoppingList {
   id?: number;
   name: string;
   shoppingListRecipes?: ShoppingListRecipe[];
-  recipes?: RecipeDto[];
+  recipes?: Recipe[];
   createdAt?: Date;
 }
 
