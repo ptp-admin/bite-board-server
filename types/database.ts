@@ -124,7 +124,7 @@ export interface Database {
             foreignKeyName: "recipe_ingredient_recipe_id_fkey"
             columns: ["recipe_id"]
             referencedRelation: "shopping_list_recipe_joined"
-            referencedColumns: ["id"]
+            referencedColumns: ["recipeId"]
           }
         ]
       }
@@ -173,7 +173,7 @@ export interface Database {
             foreignKeyName: "shopping_list_recipe_recipe_id_fkey"
             columns: ["recipe_id"]
             referencedRelation: "shopping_list_recipe_joined"
-            referencedColumns: ["id"]
+            referencedColumns: ["recipeId"]
           },
           {
             foreignKeyName: "shopping_list_recipe_shopping_list_id_fkey"
@@ -214,7 +214,7 @@ export interface Database {
             foreignKeyName: "recipe_ingredient_recipe_id_fkey"
             columns: ["recipeId"]
             referencedRelation: "shopping_list_recipe_joined"
-            referencedColumns: ["id"]
+            referencedColumns: ["recipeId"]
           }
         ]
       }
@@ -228,12 +228,26 @@ export interface Database {
       }
       shopping_list_recipe_joined: {
         Row: {
-          id: string | null
           name: string | null
+          recipeId: string | null
           recipeServings: number | null
           servings: number | null
+          shoppingListId: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "shopping_list_recipe_shopping_list_id_fkey"
+            columns: ["shoppingListId"]
+            referencedRelation: "shopping_list"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_list_recipe_shopping_list_id_fkey"
+            columns: ["shoppingListId"]
+            referencedRelation: "shopping_list_joined"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Functions: {

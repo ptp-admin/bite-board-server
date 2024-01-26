@@ -6,7 +6,8 @@ create or replace view "public"."shopping_list_joined" as  SELECT sl.id,
   GROUP BY sl.id;
 
 
-create or replace view "public"."shopping_list_recipe_joined" as  SELECT r.id,
+create or replace view "public"."shopping_list_recipe_joined" as  SELECT slr.shopping_list_id AS "shoppingListId",
+    r.id AS "recipeId",
     r.name,
     slr.servings,
     r.servings AS "recipeServings"
