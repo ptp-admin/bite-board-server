@@ -4,10 +4,13 @@ import { Database } from './database';
 // Database types
 export type Ingredient = Database['public']['Tables']['ingredient']['Row'];
 export type Recipe = Database['public']['Tables']['recipe']['Row'];
-export type RecipeIngredientJoined = Database['public']['Views']['recipe_ingredient_joined']['Row'];
+export type RecipeIngredientJoined =
+  Database['public']['Views']['recipe_ingredient_joined']['Row'];
 export type ShoppingList = Database['public']['Tables']['shopping_list']['Row'];
-export type ShoppingListJoined = Database['public']['Views']['shopping_list_joined']['Row'];
-export type ShoppingListRecipeJoined = Database['public']['Views']['shopping_list_recipe_joined']['Row'];
+export type ShoppingListJoined =
+  Database['public']['Views']['shopping_list_joined']['Row'];
+export type ShoppingListRecipeJoined =
+  Database['public']['Views']['shopping_list_recipe_joined']['Row'];
 
 // DTO (Data Transfer Object) types
 export interface IngredientDto {
@@ -18,12 +21,6 @@ export interface IngredientDto {
   numberOf: number | null;
   measurementUnit: string | null;
 }
-export interface RecipeIngredientDto extends IngredientDto {
-  recipeNumberOf: number | null;
-  recipeMeasurementUnit: string | null;
-  recipeId: string | null;
-  derivedCost: number | null;
-}
 export interface RecipeDto {
   id: string;
   name: string;
@@ -32,6 +29,38 @@ export interface RecipeDto {
   recipeIngredients: RecipeIngredientDto[] | null;
   costPerServe: number | null;
   costAccuracy: number | null;
+}
+export interface RecipeIngredientDto extends IngredientDto {
+  recipeNumberOf: number | null;
+  recipeMeasurementUnit: string | null;
+  recipeId: string | null;
+  derivedCost: number | null;
+}
+export interface ShoppingListDto {
+  id: string;
+  name: string;
+  servings: number;
+  cost: number;
+  recipes: ShoppingListRecipeDto[];
+  ingredients: {
+    id: number;
+    name: string;
+    category: string | undefined;
+    derivedCost: number | undefined;
+    numberOf: number;
+    measurementUnit: string;
+    recipeId: number;
+  }[];
+}
+export interface ShoppingListRecipeDto {
+  id: number;
+  name: string;
+  servings: number;
+  recipeServings: number;
+}
+export interface ShoppingListRecipeIngredientDto extends Omit<IngredientDto, "costPer"> {
+  derivedCost: number | undefined;
+  recipeId: number;
 }
 
 // utility types
