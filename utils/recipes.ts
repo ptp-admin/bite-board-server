@@ -9,8 +9,6 @@ const db = require('../utils/database');
 export const getRecipesWithIngredients = async (): Promise<
   RecipeDto[] | PostgrestError
 > => {
-  // get an array of Recipe objects, each with an array of recipeIngredient ids
-  // const recipesWithIngredientIds = await getRecipeWithIngredientIds();
   const { data: recipes, error } = await supabase.from('recipe').select('*');
   if (error) return logAndReturn(error);
 
