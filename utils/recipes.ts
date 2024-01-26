@@ -14,20 +14,26 @@ export const getRecipesWithIngredients = async (): Promise<
 
   const recipesWithIngredients = await Promise.all(
     recipes.map(async (recipe: Recipe): Promise<RecipeDto> => {
-      return await getRecipeIngredients(recipe);
+      return getRecipeIngredients(recipe);
     })
   );
 
   return recipesWithIngredients;
 };
 
-export const getRecipeWithIngredientsById = async (id: string): Promise<RecipeDto> => {
-  const {data: recipe, error} = await supabase.from('recipe').select('*').eq('id', id).single();
+export const getRecipeWithIngredientsById = async (
+  id: string
+): Promise<RecipeDto> => {
+  const { data: recipe, error } = await supabase
+    .from('recipe')
+    .select('*')
+    .eq('id', id)
+    .single();
   if (error) return logAndReturn(error);
 
   const recipeWithIngredients = await getRecipeIngredients(recipe);
   console.log('recipeWithIngredients', recipeWithIngredients);
-  
+
   return recipeWithIngredients;
 };
 
