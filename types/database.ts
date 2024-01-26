@@ -34,7 +34,7 @@ export interface Database {
   }
   public: {
     Tables: {
-      ingredients: {
+      ingredient: {
         Row: {
           category: string | null
           cost_per: number | null
@@ -61,41 +61,7 @@ export interface Database {
         }
         Relationships: []
       }
-      recipe_ingredients: {
-        Row: {
-          ingredient_id: string
-          measurement_unit: string | null
-          number_of: number | null
-          recipe_id: string
-        }
-        Insert: {
-          ingredient_id: string
-          measurement_unit?: string | null
-          number_of?: number | null
-          recipe_id: string
-        }
-        Update: {
-          ingredient_id?: string
-          measurement_unit?: string | null
-          number_of?: number | null
-          recipe_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "recipe_ingredients_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recipe_ingredients_recipe_id_fkey"
-            columns: ["recipe_id"]
-            referencedRelation: "recipes"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      recipes: {
+      recipe: {
         Row: {
           id: string
           method: string | null
@@ -116,7 +82,59 @@ export interface Database {
         }
         Relationships: []
       }
-      shopping_list_recipes: {
+      recipe_ingredient: {
+        Row: {
+          ingredient_id: string
+          measurement_unit: string | null
+          number_of: number | null
+          recipe_id: string
+        }
+        Insert: {
+          ingredient_id: string
+          measurement_unit?: string | null
+          number_of?: number | null
+          recipe_id: string
+        }
+        Update: {
+          ingredient_id?: string
+          measurement_unit?: string | null
+          number_of?: number | null
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ingredient_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            referencedRelation: "ingredient"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredient_recipe_id_fkey"
+            columns: ["recipe_id"]
+            referencedRelation: "recipe"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      shopping_list: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      shopping_list_recipe: {
         Row: {
           recipe_id: string
           servings: number
@@ -134,36 +152,18 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: "shopping_list_recipes_recipe_id_fkey"
+            foreignKeyName: "shopping_list_recipe_recipe_id_fkey"
             columns: ["recipe_id"]
-            referencedRelation: "recipes"
+            referencedRelation: "recipe"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "shopping_list_recipes_shopping_list_id_fkey"
+            foreignKeyName: "shopping_list_recipe_shopping_list_id_fkey"
             columns: ["shopping_list_id"]
-            referencedRelation: "shopping_lists"
+            referencedRelation: "shopping_list"
             referencedColumns: ["id"]
           }
         ]
-      }
-      shopping_lists: {
-        Row: {
-          created_at: string | null
-          id: string
-          name: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          name: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          name?: string
-        }
-        Relationships: []
       }
     }
     Views: {
