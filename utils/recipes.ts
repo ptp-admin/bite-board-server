@@ -6,7 +6,7 @@ import { supabase } from './database';
 import { logAndReturn } from './error';
 const db = require('../utils/database');
 
-export const getRecipesWithIngredients = async (): Promise<
+export const getRecipes = async (): Promise<
   RecipeDto[] | PostgrestError
 > => {
   const { data: recipes, error } = await supabase.from('recipe').select('*');
@@ -21,7 +21,7 @@ export const getRecipesWithIngredients = async (): Promise<
   return recipesWithIngredients;
 };
 
-export const getRecipeWithIngredientsById = async (
+export const getRecipeById = async (
   id: string
 ): Promise<RecipeDto> => {
   const { data: recipe, error } = await supabase

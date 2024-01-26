@@ -5,8 +5,8 @@ import type {
   RecipeIngredient,
 } from '../types/data';
 import {
-  getRecipeWithIngredientsById,
-  getRecipesWithIngredients,
+  getRecipeById,
+  getRecipes,
 } from '../utils/recipes';
 
 export interface RecipeCostPerServeOld {
@@ -41,7 +41,7 @@ const addRecipeIngredient = async (
 recipesRouter.get('/', async (req: any, res: any) => {
   console.log('/recipes/ GET request received');
 
-  const data = await getRecipesWithIngredients().catch((error) => {
+  const data = await getRecipes().catch((error) => {
     console.error(error);
     res.status(500).send(error);
   });
@@ -52,7 +52,8 @@ recipesRouter.get('/', async (req: any, res: any) => {
 recipesRouter.get('/:id', async (req: any, res: any) => {
   const { id } = req.params;
   console.log(`/recipes/${id} GET request received`);
-  const recipe = await getRecipeWithIngredientsById(id).catch((error) => {
+  
+  const recipe = await getRecipeById(id).catch((error) => {
     console.error(error);
     res.status(500).send(error);
   });
