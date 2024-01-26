@@ -119,6 +119,12 @@ export interface Database {
             columns: ["recipe_id"]
             referencedRelation: "recipe"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredient_recipe_id_fkey"
+            columns: ["recipe_id"]
+            referencedRelation: "shopping_list_recipe_joined"
+            referencedColumns: ["id"]
           }
         ]
       }
@@ -164,9 +170,21 @@ export interface Database {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "shopping_list_recipe_recipe_id_fkey"
+            columns: ["recipe_id"]
+            referencedRelation: "shopping_list_recipe_joined"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "shopping_list_recipe_shopping_list_id_fkey"
             columns: ["shopping_list_id"]
             referencedRelation: "shopping_list"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_list_recipe_shopping_list_id_fkey"
+            columns: ["shopping_list_id"]
+            referencedRelation: "shopping_list_joined"
             referencedColumns: ["id"]
           }
         ]
@@ -191,8 +209,31 @@ export interface Database {
             columns: ["recipeId"]
             referencedRelation: "recipe"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredient_recipe_id_fkey"
+            columns: ["recipeId"]
+            referencedRelation: "shopping_list_recipe_joined"
+            referencedColumns: ["id"]
           }
         ]
+      }
+      shopping_list_joined: {
+        Row: {
+          id: string | null
+          name: string | null
+          servings: number | null
+        }
+        Relationships: []
+      }
+      shopping_list_recipe_joined: {
+        Row: {
+          id: string | null
+          name: string | null
+          recipeServings: number | null
+          servings: number | null
+        }
+        Relationships: []
       }
     }
     Functions: {
