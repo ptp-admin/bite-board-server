@@ -10,7 +10,8 @@ create or replace view "public"."shopping_list_recipe_joined" as  SELECT slr.sho
     r.id AS "recipeId",
     r.name,
     slr.servings,
-    r.servings AS "recipeServings"
+    r.servings AS "recipeServings",
+    (slr.servings / r.servings) AS "scaleMultiplier"
    FROM (shopping_list_recipe slr
      LEFT JOIN recipe r ON ((slr.recipe_id = r.id)));
 
