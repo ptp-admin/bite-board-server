@@ -22,7 +22,7 @@ export const getShoppingLists = async (): Promise<
   const shoppingListsWithRecipesAndIngredients = await Promise.all(
     shoppingLists.map(
       async (shoppingList: ShoppingList): Promise<ShoppingListDto> => {
-        return getShoppingListById(shoppingList.id ?? '');
+        return getShoppingListById(shoppingList.id);
       }
     )
   );
@@ -46,17 +46,17 @@ export const getShoppingListById = async (
     await supabase
       .from('shopping_list_recipe_joined')
       .select('*')
-      .eq('shoppingListId', shoppingList.id || '');
+      .eq('shoppingListId', shoppingList.id ?? '');
   if (shoppingListRecipesError) return logAndReturn(shoppingListRecipesError);
 
   // Map records into correct shape for recipes array
   const recipes = shoppingListRecipes.map((recipe): ShoppingListRecipeDto => {
     const { recipeId, name, servings, recipeServings } = recipe;
     return {
-      id: recipeId || '',
-      name: name || '',
-      servings: servings || 0,
-      recipeServings: recipeServings || 0,
+      id: recipeId ?? '',
+      name: name ?? '',
+      servings: servings ?? 0,
+      recipeServings: recipeServings ?? 0,
     };
   });
 
@@ -66,7 +66,7 @@ export const getShoppingListById = async (
       const { data: shoppingListIngredientsJoined, error } = await supabase
         .from('recipe_ingredient_joined')
         .select('*')
-        .eq('recipeId', recipeId || '');
+        .eq('recipeId', recipeId ?? '');
       if (error) return logAndReturn(error);
       return shoppingListIngredientsJoined;
     })
@@ -83,13 +83,13 @@ export const getShoppingListById = async (
         // If the recipe has a scaleMultiplier, multiply the recipeNumberOf by that value
         if (ingredientRecipe && ingredientRecipe.scaleMultiplier) {
           ingredient.recipeNumberOf =
-            (ingredient.recipeNumberOf || 1) * ingredientRecipe.scaleMultiplier;
+            (ingredient.recipeNumberOf ?? 1) * ingredientRecipe.scaleMultiplier;
         }
         const { id, name, recipeId, ...rest } = ingredient;
         return {
-          id: id || '',
-          name: name || '',
-          recipeId: recipeId || '',
+          id: id ?? '',
+          name: name ?? '',
+          recipeId: recipeId ?? '',
           ...rest,
           derivedCost: deriveCost(ingredient),
         };
@@ -100,8 +100,8 @@ export const getShoppingListById = async (
   // Put it all together and return the ShoppingListDto object
   const { id: listId, name, ...rest } = shoppingList;
   return {
-    id: id || '',
-    name: name || '',
+    id: id ?? '',
+    name: name ?? '',
     ...rest,
     cost: formatAsFloat2DecimalPlaces(sumBy(ingredients, 'derivedCost')),
     recipes,
