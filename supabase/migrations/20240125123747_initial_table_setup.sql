@@ -2,7 +2,7 @@ create table "public"."ingredient" (
     "id" uuid not null default uuid_generate_v4(),
     "name" text not null,
     "category" text,
-    "cost_per" double precision,
+    "cost_per" numeric(10,2),
     "number_of" numeric,
     "measurement_unit" text
 );
@@ -11,7 +11,7 @@ create table "public"."ingredient" (
 create table "public"."recipe_ingredient" (
     "recipe_id" uuid not null,
     "ingredient_id" uuid not null,
-    "number_of" numeric(10,2),
+    "number_of" numeric,
     "measurement_unit" text
 );
 
