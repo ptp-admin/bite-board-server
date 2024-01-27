@@ -3,6 +3,7 @@ A simple Typescript/Express serve for Bite Board.
 
 ## Dependencies
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started)
 
 ## Getting started:
 Make sure you're using the node version prescribed in `.nvmrc`:
