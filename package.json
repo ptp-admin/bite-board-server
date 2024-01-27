@@ -16,7 +16,7 @@
     "dev": "tsnd server.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "create-migration": "ts-node scripts/create-migration.ts",
-    "generate-types": "supabase gen types typescript --local > ./types/supabase.ts"
+    "generate-types": "supabase gen types typescript --local > ./types/database.ts"
   },
   "repository": {
     "type": "git",
@@ -25,6 +25,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/convert-units": "^2.3.9",
     "@types/lodash": "^4.14.200",
     "@types/node": "^18.15.11",
     "@types/readline-sync": "^1.4.8",

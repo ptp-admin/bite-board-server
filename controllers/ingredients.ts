@@ -1,35 +1,10 @@
-import type { DbIngredient, Ingredient } from '../types/data';
-
+import { randomUUID } from 'crypto';
+import { Ingredient } from '../types/types';
+import { getIngredientById, getIngredients } from '../utils/ingredients';
 const ingredientsRouter = require('express').Router();
 const db = require('../utils/database'); // Using 'knex' package for database calls
 const cors = require('cors');
 const convert = require('convert-units');
-
-ingredientsRouter.get('/', (req: any, res: any) => {
-  console.log('/ingredients/ GET request recieved');
-
-  try {
-    db.select()
-      .from('ingredient')
-      .then((response: DbIngredient[]) => {
-        const ingredients = response.map((ingredient): Ingredient => {
-          return {
-            id: ingredient.id,
-            name: ingredient.name,
-            category: ingredient.category,
-            costPer: ingredient.cost_per,
-            measurementUnit: ingredient.measurement_unit,
-            numberOf: ingredient.number_of,
-          };
-        });
-
-        res.send(ingredients);
-      });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send(error);
-  }
-});
 
 ingredientsRouter.get('/measurementUnits', cors(), (req: any, res: any) => {
   const exclude = [
@@ -66,31 +41,33 @@ ingredientsRouter.get('/measurementUnits', cors(), (req: any, res: any) => {
   res.send(cookingUnits);
 });
 
-ingredientsRouter.get('/:id', (req: any, res: any) => {
-  try {
-    db.select()
-      .from('ingredient')
-      .where('id', req.params.id)
-      .then((ingredient: DbIngredient) => {
-        const response: Ingredient = {
-          id: ingredient.id,
-          name: ingredient.name,
-          category: ingredient.category,
-          costPer: ingredient.cost_per,
-          measurementUnit: ingredient.measurement_unit,
-          numberOf: ingredient.number_of,
-        };
-        res.send(response);
-      });
-  } catch (error) {
+ingredientsRouter.get('/', async (req: any, res: any) => {
+  console.log('/ingredients/ GET request recieved');
+
+  const data = await getIngredients().catch((error) => {
     console.error(error);
     res.status(500).send(error);
-  }
+  });
+
+  res.send(data);
+});
+
+ingredientsRouter.get('/:id', async (req: any, res: any) => {
+  const id = req.params.id as string;
+  console.log(`/ingredients/${id} GET request recieved`);
+
+  const data = await getIngredientById(id).catch((error) => {
+    console.error(error);
+    res.status(500).send(error);
+  });
+
+  res.send(data);
 });
 
 ingredientsRouter.post('/', (req: any, res: any) => {
   console.log('/ingredients/ POST request recieved');
-  const ingredient: DbIngredient = {
+  const ingredient: Ingredient = {
+    id: randomUUID(),
     name: req.body.name,
     category: req.body.category,
     cost_per: req.body.costPer,
@@ -110,7 +87,8 @@ ingredientsRouter.post('/', (req: any, res: any) => {
 
 ingredientsRouter.put('/:id', (req: any, res: any) => {
   console.log('/ingredients/ PUT request recieved');
-  const ingredient: DbIngredient = {
+  const ingredient: Ingredient = {
+    id: req.params.id,
     name: req.body.name,
     category: req.body.category,
     cost_per: req.body.costPer,
@@ -148,5 +126,4 @@ ingredientsRouter.delete('/:id', (req: any, res: any) => {
     });
 });
 
-module.exports = ingredientsRouter;
-export { };
+export { ingredientsRouter };

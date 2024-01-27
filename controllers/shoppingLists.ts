@@ -1,5 +1,5 @@
-import type { ShoppingList, ShoppingListRecipe } from '../types/data';
-import { getShoppingListsRecipesWithIngredients } from '../utils/shoppingLists';
+import type { ShoppingListOLD, ShoppingListRecipe } from '../types/data';
+import { getShoppingListById, getShoppingLists } from '../utils/shoppingLists';
 
 const shoppingListsRouter = require('express').Router();
 const db = require('../utils/database');
@@ -52,7 +52,7 @@ shoppingListsRouter.post('/', async (req: any, res: any) => {
       }
       const successMessage = `Successfully added ${name} and all recipes to the database`;
       console.log(successMessage);
-      res.send({shoppingListId, successMessage});
+      res.send({ shoppingListId, successMessage });
     });
   } catch (error) {
     console.error(error);
@@ -159,34 +159,26 @@ shoppingListsRouter.put('/:id/', async (req: any, res: any) => {
 shoppingListsRouter.get('/', async (req: any, res: any) => {
   console.log('/shopping-lists/ GET request recieved');
 
-  const shoppingLists = await db().select().from('shopping_list');
+  console.log('/recipes/ GET request received');
 
-  const shoppingListIds = shoppingLists.map(
-    (shoppingList: ShoppingList) => shoppingList.id
-  );
+  const data = await getShoppingLists().catch((error) => {
+    console.error(error);
+    res.status(500).send(error);
+  });
 
-  res.send(
-    await getShoppingListsRecipesWithIngredients(shoppingListIds, shoppingLists)
-  );
+  res.send(data);
 });
 
 shoppingListsRouter.get('/:id', async (req: any, res: any) => {
   console.log('/shopping-lists/:id GET request recieved');
   const { id } = req.params;
-  try {
-    const shoppingList = await db()
-      .select()
-      .from('shopping_list as sl')
-      .where('sl.id', id);
-    const result = await getShoppingListsRecipesWithIngredients(
-      [id],
-      shoppingList
-    );
-    res.send(result[0]);
-  } catch (error) {
+  
+  const shoppingList = await getShoppingListById(id).catch((error) => {
     console.error(error);
     res.status(500).send(error);
-  }
+  });
+
+  res.send(shoppingList)
 });
 
 shoppingListsRouter.delete('/:id', async (req: any, res: any) => {
@@ -226,5 +218,4 @@ shoppingListsRouter.delete('/:id', async (req: any, res: any) => {
   }
 });
 
-module.exports = shoppingListsRouter;
-export {};
+export { shoppingListsRouter };

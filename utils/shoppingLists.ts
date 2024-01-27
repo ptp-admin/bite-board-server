@@ -1,139 +1,110 @@
 import { sumBy } from 'lodash';
+import { deriveCost, formatAsFloat2DecimalPlaces } from './cost';
 import {
-  deriveCost,
-  formatAsFloat2DecimalPlaces,
-} from '../controllers/recipes';
-import {
-  DbShoppingListIngredient,
-  DbShoppingListRecipes,
-  ShoppingListIngredient,
-} from '../types/data';
-import { getRecipeIngredients } from './recipes';
-import type {
-  DbShoppingList,
+  RecipeIngredientJoined,
   ShoppingList,
-  ShoppingListWithRecipes,
-} from '../types/data';
-const db = require('../utils/database');
+  ShoppingListDto,
+  ShoppingListRecipeDto,
+  ShoppingListRecipeIngredientDto,
+} from '../types/types';
+import { supabase } from './database';
+import { logAndReturn } from './error';
+import { PostgrestError } from '@supabase/supabase-js';
 
-export const getShoppingListRecipes = async (
-  shoppingListIds: Array<number>
-): Promise<DbShoppingListRecipes[]> => {
-  return await db('shopping_list_recipe as slr')
-    .select(
-      'slr.shopping_list_id',
-      'r.id as recipe_id',
-      'r.name as recipe_name',
-      'slr.servings as shopping_list_servings',
-      'r.servings as recipe_servings'
+export const getShoppingLists = async (): Promise<
+  ShoppingListDto[] | PostgrestError
+> => {
+  const { data: shoppingLists, error } = await supabase
+    .from('shopping_list')
+    .select('*');
+  if (error) return logAndReturn(error);
+
+  const shoppingListsWithRecipesAndIngredients = await Promise.all(
+    shoppingLists.map(
+      async (shoppingList: ShoppingList): Promise<ShoppingListDto> => {
+        return getShoppingListById(shoppingList.id);
+      }
     )
-    .leftJoin('recipe as r', 'r.id', 'slr.recipe_id')
-    .whereIn('slr.shopping_list_id', shoppingListIds);
-};
-
-export const getShoppingListsRecipesWithIngredients = async (
-  shoppingListIds: number[],
-  shoppingLists: DbShoppingList[]
-) => {
-  const queriedRecipes = await getShoppingListRecipes(shoppingListIds);
-
-  const shoppingListsWithRecipes = shoppingLists.map(
-    (shoppingList: ShoppingList) => {
-      const recipeIds: Array<number> = [];
-      let totalServings = 0;
-      const shoppingListRecipes = queriedRecipes
-        .filter((recipe) => recipe.shopping_list_id === shoppingList.id)
-        .map(
-          ({
-            recipe_id,
-            recipe_name,
-            shopping_list_servings,
-            recipe_servings,
-          }) => {
-            recipeIds.push(recipe_id);
-            totalServings += shopping_list_servings;
-            return {
-              id: recipe_id,
-              name: recipe_name,
-              servings: shopping_list_servings,
-              recipeServings: recipe_servings,
-            };
-          }
-        );
-
-      // building the shopping lists with recipes object
-      return {
-        id: shoppingList.id,
-        name: shoppingList.name,
-        recipes: shoppingListRecipes,
-        recipeIds,
-        totalServings,
-      };
-    }
-  );
-
-  const allRecipeIds: Set<number> = new Set(
-    shoppingListsWithRecipes.flatMap(
-      (shoppingListWithRecipes) => shoppingListWithRecipes.recipeIds
-    )
-  );
-
-  const allIngredients = await getRecipeIngredients(Array.from(allRecipeIds));
-
-  const shoppingListsWithRecipesAndIngredients = shoppingListsWithRecipes.map(
-    (shoppingListWithRecipes) => {
-      const shoppingListingredients = allIngredients
-        .filter((ingredient) =>
-          shoppingListWithRecipes.recipeIds.includes(ingredient.recipe_id)
-        )
-        .map((ingredientResponse) => {
-          const ingredientRecipe = shoppingListWithRecipes.recipes.find(
-            (recipe) => recipe.id === ingredientResponse.recipe_id
-          );
-          let ingredientMultiplier = 1;
-          if (ingredientRecipe)
-            ingredientMultiplier =
-              ingredientRecipe.servings / ingredientRecipe.recipeServings;
-
-          const {
-            ingredient_id,
-            name,
-            category,
-            recipe_number_of,
-            recipe_measurement_unit,
-            recipe_id,
-          } = ingredientResponse;
-          ingredientResponse.recipe_number_of =
-            recipe_number_of * ingredientMultiplier;
-
-          const derivedCost = deriveCost(ingredientResponse);
-
-          return {
-            id: ingredient_id,
-            name,
-            category,
-            derivedCost,
-            numberOf: recipe_number_of * ingredientMultiplier,
-            unit: recipe_measurement_unit,
-            recipeId: recipe_id,
-          };
-        });
-
-      const shoppingListCost = formatAsFloat2DecimalPlaces(
-        sumBy(shoppingListingredients, 'derivedCost')
-      );
-
-      const shoppingListWithRecipesAndIngredients = {
-        id: shoppingListWithRecipes.id,
-        name: shoppingListWithRecipes.name,
-        servings: shoppingListWithRecipes.totalServings,
-        cost: shoppingListCost,
-        recipes: shoppingListWithRecipes.recipes,
-        ingredients: shoppingListingredients,
-      };
-      return shoppingListWithRecipesAndIngredients;
-    }
   );
 
   return shoppingListsWithRecipesAndIngredients;
+};
+
+export const getShoppingListById = async (
+  id: string
+): Promise<ShoppingListDto> => {
+  // Select relevant record from shopping_list_joined view
+  const { data: shoppingList, error: shoppingListError } = await supabase
+    .from('shopping_list_joined')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (shoppingListError) return logAndReturn(shoppingListError);
+
+  // Select relevant records from shopping_list_recipe_joined view
+  const { data: shoppingListRecipes, error: shoppingListRecipesError } =
+    await supabase
+      .from('shopping_list_recipe_joined')
+      .select('*')
+      .eq('shoppingListId', shoppingList.id ?? '');
+  if (shoppingListRecipesError) return logAndReturn(shoppingListRecipesError);
+
+  // Map records into correct shape for recipes array
+  const recipes = shoppingListRecipes.map((recipe): ShoppingListRecipeDto => {
+    const { recipeId, name, servings, recipeServings } = recipe;
+    return {
+      id: recipeId ?? '',
+      name: name ?? '',
+      servings: servings ?? 0,
+      recipeServings: recipeServings ?? 0,
+    };
+  });
+
+  // Select relevant records from recipe_ingredient_joined view
+  const shoppingListIngredients = await Promise.all<RecipeIngredientJoined[]>(
+    shoppingListRecipes.map(async ({ recipeId }) => {
+      const { data: shoppingListIngredientsJoined, error } = await supabase
+        .from('recipe_ingredient_joined')
+        .select('*')
+        .eq('recipeId', recipeId ?? '');
+      if (error) return logAndReturn(error);
+      return shoppingListIngredientsJoined;
+    })
+  );
+
+  // Map records into correct shape for ingredients array
+  const ingredients = shoppingListIngredients.flatMap(
+    (ingredients): ShoppingListRecipeIngredientDto[] => {
+      return ingredients.map((ingredient) => {
+        // Grab the relevant recipe that the ingredient is from
+        const ingredientRecipe = shoppingListRecipes.find(
+          (recipe) => recipe.recipeId === ingredient.recipeId
+        );
+        // If the recipe has a scaleMultiplier, multiply the recipeNumberOf by that value
+        if (ingredientRecipe && ingredientRecipe.scaleMultiplier) {
+          ingredient.recipeNumberOf =
+            (ingredient.recipeNumberOf ?? 1) * ingredientRecipe.scaleMultiplier;
+        }
+        const { id, name, recipeId, ...rest } = ingredient;
+        return {
+          id: id ?? '',
+          name: name ?? '',
+          recipeId: recipeId ?? '',
+          ...rest,
+          derivedCost: deriveCost(ingredient),
+        };
+      });
+    }
+  );
+
+  // Put it all together and return the ShoppingListDto object
+  const { id: listId, name, ...rest } = shoppingList;
+  return {
+    id: id ?? '',
+    name: name ?? '',
+    ...rest,
+    cost: formatAsFloat2DecimalPlaces(sumBy(ingredients, 'derivedCost')),
+    recipes,
+    ingredients,
+  };
 };
