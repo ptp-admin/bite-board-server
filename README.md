@@ -1,7 +1,7 @@
 # bite-board-server
 A simple Typescript/Express serve for Bite Board.
 
-## Dependencies
+## Requirement
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started)
 
