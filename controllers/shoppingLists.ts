@@ -108,8 +108,8 @@ shoppingListsRouter.delete(
 shoppingListsRouter.put(
   '/:shoppingListId/recipes/:recipeId',
   async (req: any, res: any) => {
-    const { shoppingListId, recipeId } = req.params;
-    const { servings } = req.body;
+    const { shoppingListId, recipeId }: {shoppingListId: string, recipeId: string} = req.params;
+    const { servings }: { servings: number} = req.body;
     console.log(
       `/shopping-lists/${shoppingListId}/recipes/${recipeId} PUT request recieved`
     );
