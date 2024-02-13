@@ -1,11 +1,9 @@
 require('dotenv').config();
 
 const express = require('express');
-const db = require('./utils/database');
 const app = express();
-const ingredientsRouter = require('./controllers/ingredients');
-const shoppingListsRouter = require('./controllers/shoppingLists');
-
+import { shoppingListsRouter } from "./controllers/shoppingLists";
+import { ingredientsRouter } from "./controllers/ingredients";
 import { recipesRouter } from "./controllers/recipes";
 
 const port = process.env.PORT;

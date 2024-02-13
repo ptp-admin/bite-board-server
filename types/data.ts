@@ -107,7 +107,7 @@ export interface DbShoppingList {
   created_at: Date;
 }
 
-export interface ShoppingList {
+export interface ShoppingListOLD {
   id?: number;
   name: string;
   shoppingListRecipes?: ShoppingListRecipe[];
